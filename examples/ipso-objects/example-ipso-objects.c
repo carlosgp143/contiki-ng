@@ -47,6 +47,7 @@
 #include "services/ipso-objects/ipso-sensor-template.h"
 #include "services/ipso-objects/ipso-control-template.h"
 #include "dev/leds.h"
+ #include "os/net/routing/rpl-lite/rpl.h"
 
 #define DEBUG DEBUG_NONE
 #include "net/ipv6/uip-debug.h"
@@ -164,6 +165,34 @@ PROCESS_THREAD(example_ipso_objects, ev, data)
 
   PROCESS_PAUSE();
 
+  #if TESTBED_TEST
+  linkaddr_t linkaddr_test_1 = { { 0x00,0x12,0x4b,0x00, 0x06, 0x0d, 0xb6, 0x14 } }; /* Pi01 */
+  linkaddr_t linkaddr_test_2 = { { 0x00,0x12,0x4b,0x00, 0x06, 0x0d, 0xb1, 0x29 } }; /* Pi07 */
+  linkaddr_t linkaddr_test_3 = { { 0x00,0x12,0x4b,0x00, 0x06, 0x0d, 0xb4, 0x3b } }; /* Pi11 */
+  linkaddr_t linkaddr_test_4 = { { 0x00,0x12,0x4b,0x00, 0x06, 0x0d, 0xb5, 0xfc } }; /* Pi19 */
+  linkaddr_t linkaddr_test_5 = { { 0x00,0x12,0x4b,0x00, 0x06, 0x0d, 0xb1, 0xb8 } }; /* Pi25 */
+  
+  
+  if(linkaddr_cmp(&linkaddr_test_1, &linkaddr_node_addr) || linkaddr_cmp(&linkaddr_test_2, &linkaddr_node_addr) || linkaddr_cmp(&linkaddr_test_3, &linkaddr_node_addr)
+    || linkaddr_cmp(&linkaddr_test_4, &linkaddr_node_addr) || linkaddr_cmp(&linkaddr_test_5, &linkaddr_node_addr)){
+  
+    printf("I'm the LwM2M client\n");
+    char *name;
+    if(linkaddr_cmp(&linkaddr_test_1, &linkaddr_node_addr)){
+      name = "Firefly-01";
+    } else if(linkaddr_cmp(&linkaddr_test_2, &linkaddr_node_addr)) {
+      name = "Firefly-07";
+    } else if(linkaddr_cmp(&linkaddr_test_3, &linkaddr_node_addr)) {
+      name = "Firefly-11";
+    } else if(linkaddr_cmp(&linkaddr_test_4, &linkaddr_node_addr)) {
+      name = "Firefly-19";
+    }else {
+      name = "Firefly-25";
+    }
+#else
+    char *name = "IPSO-objects-Firefly";
+#endif
+  rpl_set_leaf_only(1);
   PRINTF("Starting IPSO objects example%s\n",
          REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER ? " (bootstrap)" : "");
   /* Initialize the OMA LWM2M engine */
@@ -191,6 +220,9 @@ PROCESS_THREAD(example_ipso_objects, ev, data)
 #endif /* BOARD_SENSORTAG */
 
   setup_lwm2m_servers();
+    #if TESTBED_TEST
+  }
+  #endif
   /* Tick loop each 5 seconds */
   etimer_set(&periodic, CLOCK_SECOND * 5);
 

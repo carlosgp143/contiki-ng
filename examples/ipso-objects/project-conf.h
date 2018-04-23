@@ -60,10 +60,12 @@
 #define COAP_OBSERVE_CLIENT 1
 
 /* Definitions to enable Queue Mode, include the dynamic adaptation and change the default parameters  */
-/* #define LWM2M_Q_MODE_CONF_ENABLED 1
+ #define LWM2M_Q_MODE_CONF_ENABLED 1
    #define LWM2M_Q_MODE_CONF_INCLUDE_DYNAMIC_ADAPTATION 1
    #define LWM2M_Q_MODE_CONF_DEFAULT_CLIENT_AWAKE_TIME 2000
    #define LWM2M_Q_MODE_CONF_DEFAULT_CLIENT_SLEEP_TIME 10000
-   #define LWM2M_Q_MODE_CONF_DEFAULT_DYNAMIC_ADAPTATION_FLAG 1 */
+   #define LWM2M_Q_MODE_CONF_DEFAULT_DYNAMIC_ADAPTATION_FLAG 0
+
+   #define ENERGEST_CONF_ON 1
 
 #endif /* PROJECT_CONF_H_ */

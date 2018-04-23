@@ -167,6 +167,104 @@ set_rd_data(coap_message_t *request)
   return outbuf.len;
 }
 /*---------------------------------------------------------------------------*/
+/* Measure energy in experiments */
+#if LWM2M_Q_MODE_ENABLED
+#include "sys/energest.h"
+
+typedef struct power_times {
+  uint32_t cpu;
+  uint32_t lpm;
+  uint32_t transmit;
+  uint32_t listen;
+  uint32_t cpu_prev;
+  uint32_t lpm_prev;
+  uint32_t transmit_prev;
+  uint32_t listen_prev;
+  uint32_t total_energy;
+} power_times_t;
+
+static power_times_t times;
+
+uint64_t cpu_last;
+uint64_t lpm_last;
+uint64_t transmit_last;
+uint64_t listen_last;
+
+static void
+power_times_init(struct power_times times)
+{
+  times.cpu = 0;
+  times.lpm = 0;
+  times.transmit = 0;
+  times.listen = 0;
+  times.cpu_prev = 0;
+  times.lpm_prev = 0;
+  times.transmit_prev = 0;
+  times.listen_prev = 0;
+  times.total_energy = 0;
+}
+
+power_times_t 
+get_power_times()
+{
+  return times;
+}
+static void
+calculate_energest_times() 
+{
+  uint64_t aux;
+  energest_flush();
+  aux = ((uint64_t) energest_type_time(ENERGEST_TYPE_CPU))*1000;
+
+      /* CPU */
+      times.cpu = ((uint32_t)(aux/RTIMER_SECOND)) - times.cpu_prev;
+      //Check overflow
+      if(times.cpu > 1000000){
+        times.cpu = cpu_last;
+      } else{
+        cpu_last = times.cpu;
+      }
+
+      /* LPM */
+      aux = ((uint64_t) energest_type_time(ENERGEST_TYPE_LPM))*1000;
+      times.lpm = ((uint32_t)(aux/RTIMER_SECOND)) - times.lpm_prev;
+       //Check overflow
+      if(times.lpm > 1000000){
+        times.lpm = lpm_last;
+      } else{
+        cpu_last = times.lpm;
+      }
+
+      /* TX */
+      aux = ((uint64_t) energest_type_time(ENERGEST_TYPE_TRANSMIT))*1000;
+      times.transmit = ((uint32_t)(aux/RTIMER_SECOND)) - times.transmit_prev;
+      //Check overflow
+      if(times.transmit > 1000000){
+        times.transmit = transmit_last;
+      } else{
+        cpu_last = times.transmit;
+      }
+
+      /* RX */
+      aux = ((uint64_t) energest_type_time(ENERGEST_TYPE_LISTEN))*1000;
+      times.listen = ((uint32_t)(aux/RTIMER_SECOND)) - times.listen_prev;
+      //Check overflow
+      if(times.listen > 1000000){
+        times.listen = listen_last;
+      } else{
+        cpu_last = times.listen;
+      }
+      
+
+      times.cpu_prev += times.cpu;
+      times.lpm_prev += times.lpm;
+      times.listen_prev += times.listen;
+      times.transmit_prev += times.transmit;
+
+      printf("!%lu\t%lu\t%lu\t%lu\t%lu\n",clock_time()*1000/CLOCK_SECOND , times.cpu, times.lpm, times.listen, times.transmit);
+}
+#endif
+/*---------------------------------------------------------------------------*/
 static void
 prepare_update(coap_message_t *request, int triggered)
 {
@@ -751,6 +849,7 @@ periodic_process(coap_timer_t *timer)
  * depending on the platform 
  */
 #ifdef LWM2M_Q_MODE_WAKE_UP
+    calculate_energest_times();
     LWM2M_Q_MODE_WAKE_UP();
 #endif /* LWM2M_Q_MODE_WAKE_UP */
     prepare_update(request, rd_flags & FLAG_RD_DATA_UPDATE_TRIGGERED);
@@ -806,6 +905,7 @@ lwm2m_rd_client_init(const char *ep)
   }
 #endif
 
+  power_times_init(times);
   rd_state = INIT;
 
   /* call the RD client periodically */
@@ -849,6 +949,7 @@ q_mode_awake_timer_callback(coap_timer_t *timer)
 /* Define this macro to enter sleep mode depending on the platform */
 #ifdef LWM2M_Q_MODE_SLEEP_MS
   LWM2M_Q_MODE_SLEEP_MS(lwm2m_q_object_get_sleep_time());
+  calculate_energest_times();
 #endif /* LWM2M_Q_MODE_SLEEP_MS */
   rd_state = Q_MODE_SEND_UPDATE;
   coap_timer_set(&rd_timer, lwm2m_q_object_get_sleep_time());
