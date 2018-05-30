@@ -69,23 +69,27 @@ static int
 progress_request(coap_request_state_t *state) {
   coap_message_t *request = state->request;
   request->mid = coap_get_mid();
-  if((state->transaction =
+  if(!state->private_transaction) {
+    if(!(state->transaction =
       coap_new_transaction(request->mid, state->remote_endpoint))) {
-    state->transaction->callback = coap_request_callback;
-    state->transaction->callback_data = state;
-
-    if(state->block_num > 0) {
-      coap_set_header_block2(request, state->block_num, 0,
-                             COAP_MAX_CHUNK_SIZE);
+      return 0;
     }
-    state->transaction->message_len =
-      coap_serialize_message(request, state->transaction->message);
-
-    coap_send_transaction(state->transaction);
-    LOG_DBG("Requested #%"PRIu32" (MID %u)\n", state->block_num, request->mid);
-    return 1;
+  } else {
+    coap_add_private_transaction(state->transaction, request->mid, state->remote_endpoint);
   }
-  return 0;
+  state->transaction->callback = coap_request_callback;
+  state->transaction->callback_data = state;
+
+  if(state->block_num > 0) {
+    coap_set_header_block2(request, state->block_num, 0,
+                           COAP_MAX_CHUNK_SIZE);
+  }
+  state->transaction->message_len =
+    coap_serialize_message(request, state->transaction->message);
+
+  coap_send_transaction(state->transaction);
+  LOG_DBG("Requested #%"PRIu32" (MID %u)\n", state->block_num, request->mid);
+  return 1;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -154,6 +158,13 @@ coap_send_request(coap_request_state_t *state, coap_endpoint_t *endpoint,
   state->callback = callback;
 
   return progress_request(state);
+}
+/*---------------------------------------------------------------------------*/
+void 
+coap_request_state_add_transaction(coap_request_state_t *state, coap_transaction_t *transaction)
+{
+  state->transaction = transaction;
+  state->private_transaction = 1;
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

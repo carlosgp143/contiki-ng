@@ -47,6 +47,7 @@
 #include "lib/memb.h"
 #include "lib/list.h"
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* Log configuration */
 #include "coap-log.h"
@@ -56,7 +57,7 @@
 /*---------------------------------------------------------------------------*/
 MEMB(transactions_memb, coap_transaction_t, COAP_MAX_OPEN_TRANSACTIONS);
 LIST(transactions_list);
-
+LIST(private_transactions_list);
 /*---------------------------------------------------------------------------*/
 static void
 coap_retransmit_transaction(coap_timer_t *nt)
@@ -91,6 +92,33 @@ coap_new_transaction(uint16_t mid, const coap_endpoint_t *endpoint)
   }
 
   return t;
+}
+/*---------------------------------------------------------------------------*/
+void
+coap_add_private_transaction(coap_transaction_t *t, uint16_t mid, const coap_endpoint_t *endpoint)
+{
+
+  if(t) {
+    t->mid = mid;
+    t->retrans_counter = 0;
+
+    /* save client address */
+    coap_endpoint_copy(&t->endpoint, endpoint);
+
+    list_add(private_transactions_list, t); /* list itself makes sure same element is not added twice */
+  }
+}
+/*---------------------------------------------------------------------------*/
+static bool coap_list_contain_transaction(list_t list, coap_transaction_t *t) 
+{
+  coap_transaction_t *iteration_transaction = (coap_transaction_t*) list_head(list);
+  while(iteration_transaction != NULL) {
+    if(iteration_transaction == t) {
+      return true;
+    }
+    iteration_transaction = iteration_transaction->next;
+  }
+  return false;
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -132,7 +160,6 @@ coap_send_transaction(coap_transaction_t *t)
       coap_remove_observer_by_client(&t->endpoint);
 
       coap_clear_transaction(t);
-
       if(callback) {
         callback(callback_data, NULL);
       }
@@ -146,11 +173,17 @@ void
 coap_clear_transaction(coap_transaction_t *t)
 {
   if(t) {
-    LOG_DBG("Freeing transaction %u: %p\n", t->mid, t);
 
     coap_timer_stop(&t->retrans_timer);
-    list_remove(transactions_list, t);
-    memb_free(&transactions_memb, t);
+    
+    if(coap_list_contain_transaction(transactions_list, t)) {
+      LOG_DBG("Freeing transaction %u: %p\n", t->mid, t);
+      list_remove(transactions_list, t);
+      memb_free(&transactions_memb, t);
+    } else {
+      LOG_DBG("Removing private transaction %u: %p from list\n", t->mid, t);
+      list_remove(private_transactions_list, t);
+    }
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -160,6 +193,12 @@ coap_get_transaction_by_mid(uint16_t mid)
   coap_transaction_t *t = NULL;
 
   for(t = (coap_transaction_t *)list_head(transactions_list); t; t = t->next) {
+    if(t->mid == mid) {
+      LOG_DBG("Found transaction for MID %u: %p\n", t->mid, t);
+      return t;
+    }
+  }
+  for(t = (coap_transaction_t *)list_head(private_transactions_list); t; t = t->next) {
     if(t->mid == mid) {
       LOG_DBG("Found transaction for MID %u: %p\n", t->mid, t);
       return t;
