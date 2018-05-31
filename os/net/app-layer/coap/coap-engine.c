@@ -311,7 +311,6 @@ coap_receive(const coap_endpoint_t *src,
         /* free transaction memory before callback, as it may create a new transaction */
         coap_resource_response_handler_t callback = transaction->callback;
         void *callback_data = transaction->callback_data;
-
         coap_clear_transaction(transaction);
 
         /* check if someone registered for the response */

@@ -95,7 +95,7 @@
 
 /* Number of observer slots (each takes abot xxx bytes) */
 #ifndef COAP_MAX_OBSERVERS
-#define COAP_MAX_OBSERVERS    COAP_MAX_OPEN_TRANSACTIONS - 1
+#define COAP_MAX_OBSERVERS    20
 #endif /* COAP_MAX_OBSERVERS */
 
 /* Interval in notifies in which NON notifies are changed to CON notifies to check client. */

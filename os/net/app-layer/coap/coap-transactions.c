@@ -89,7 +89,7 @@ coap_new_transaction(uint16_t mid, const coap_endpoint_t *endpoint)
 
     list_add(transactions_list, t); /* list itself makes sure same element is not added twice */
   }
-
+  //printf("Transaction gotten. List length: %d\n", list_length(transactions_list));
   return t;
 }
 /*---------------------------------------------------------------------------*/
@@ -97,9 +97,7 @@ void
 coap_send_transaction(coap_transaction_t *t)
 {
   LOG_DBG("Sending transaction %u\n", t->mid);
-
   coap_sendto(&t->endpoint, t->message, t->message_len);
-
   if(COAP_TYPE_CON ==
      ((COAP_HEADER_TYPE_MASK & t->message[0]) >> COAP_HEADER_TYPE_POSITION)) {
     if(t->retrans_counter < COAP_MAX_RETRANSMIT) {
@@ -130,7 +128,6 @@ coap_send_transaction(coap_transaction_t *t)
 
       /* handle observers */
       coap_remove_observer_by_client(&t->endpoint);
-
       coap_clear_transaction(t);
 
       if(callback) {

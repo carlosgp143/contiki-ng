@@ -84,7 +84,7 @@
 #define STATE_MACHINE_UPDATE_INTERVAL 500
 
 static struct lwm2m_session_info session_info;
-static coap_request_state_t rd_request_state;
+static coap_callback_request_state_t rd_request_state;
 
 static coap_message_t request[1];      /* This way the message can be treated as pointer as usual. */
 
@@ -126,7 +126,7 @@ static uint8_t rd_data[128]; /* allocate some data for the RD */
 static uint32_t rd_block1;
 static uint8_t rd_more;
 static coap_timer_t rd_timer;
-static void (*rd_callback)(coap_request_state_t *state);
+static void (*rd_callback)(coap_callback_request_state_t *callback_state);
 
 static coap_timer_t block1_timer;
 
@@ -143,7 +143,7 @@ static void queue_mode_awake_timer_callback(coap_timer_t *timer);
 #endif
 
 static void check_periodic_observations();
-static void update_callback(coap_request_state_t *state);
+static void update_callback(coap_callback_request_state_t *callback_state);
 
 static int
 set_rd_data(coap_message_t *request)
@@ -370,10 +370,11 @@ update_bootstrap_server(void)
  * TODO
  */
 static void
-bootstrap_callback(coap_request_state_t *state)
+bootstrap_callback(coap_callback_request_state_t *callback_state)
 {
+  coap_request_state_t *state = &callback_state->state;
   LOG_DBG("Bootstrap callback Response: %d, ", state->response != NULL);
-  if(state->response) {
+  if(state->status == COAP_REQUEST_STATUS_RESPONSE) {
     if(CHANGED_2_04 == state->response->code) {
       LOG_DBG_("Considered done!\n");
       rd_state = BOOTSTRAP_DONE;
@@ -383,12 +384,11 @@ bootstrap_callback(coap_request_state_t *state)
     LOG_DBG_("Failed with code %d. Retrying\n", state->response->code);
     /* TODO Application callback? */
     rd_state = INIT;
-  } else if(BOOTSTRAP_SENT == rd_state) { /* this can handle double invocations */
-    /* Failure! */
+  } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) { 
     LOG_DBG("Bootstrap failed! Retry?");
     rd_state = DO_BOOTSTRAP;
   } else {
-    LOG_DBG("Ignore\n");
+    LOG_DBG_("Request finished. Ignore\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -427,10 +427,11 @@ block1_rd_callback(coap_timer_t *timer)
  * Page 65-66 in 07 April 2016 spec.
  */
 static void
-registration_callback(coap_request_state_t *state)
+registration_callback(coap_callback_request_state_t *callback_state)
 {
-  LOG_DBG("Registration callback. Response: %d, ", state->response != NULL);
-  if(state->response) {
+  coap_request_state_t *state = &callback_state->state;
+  LOG_DBG("Registration callback. Status: %d. Response: %d, ", state->status, state->response != NULL);
+  if(state->status == COAP_REQUEST_STATUS_RESPONSE) {
     /* check state and possibly set registration to done */
     /* If we get a continue - we need to call the rd generator one more time */
     if(CONTINUE_2_31 == state->response->code) {
@@ -471,11 +472,16 @@ registration_callback(coap_request_state_t *state)
       LOG_DBG_("failed with code %d. Re-init network\n", state->response->code);
     }
     /* TODO Application callback? */
+    coap_remove_all_observers();
     rd_state = INIT;
     /* remember last progress time */
     last_rd_progress = coap_timer_uptime();
+  } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
+    LOG_DBG_("Server not responding, trying to reconnect\n");
+    coap_remove_all_observers();
+    rd_state = INIT;
   } else {
-    LOG_DBG_("Ignore\n");
+    LOG_DBG_("Request finished. Ignore\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -483,11 +489,12 @@ registration_callback(coap_request_state_t *state)
  * Page 65-66 in 07 April 2016 spec.
  */
 static void
-update_callback(coap_request_state_t *state)
+update_callback(coap_callback_request_state_t *callback_state)
 {
-  LOG_DBG("Update callback. Response: %d, ", state->response != NULL);
+  coap_request_state_t *state = &callback_state->state;
+  LOG_DBG("Update callback. Status: %d. Response: %d, ", state->status, state->response != NULL);
 
-  if(state->response) {
+  if(state->status == COAP_REQUEST_STATUS_RESPONSE) {
     /* If we get a continue - we need to call the rd generator one more time */
     if(CONTINUE_2_31 == state->response->code) {
       /* We assume that size never change?! */
@@ -520,39 +527,39 @@ update_callback(coap_request_state_t *state)
       /* Possible error response codes are 4.00 Bad request & 4.04 Not Found */
       LOG_DBG_("Failed with code %d. Retrying registration\n",
                state->response->code);
+      coap_remove_all_observers();
       rd_state = DO_REGISTRATION;
     }
     /* remember last progress */
     last_rd_progress = coap_timer_uptime();
+  } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
+    LOG_DBG_("Server not responding, trying to reconnect\n");
+    coap_remove_all_observers();
+    rd_state = INIT;
   } else {
-    LOG_DBG("Ignore\n");
+    LOG_DBG_("Request finished. Ignore\n");
   }
 }
 /*---------------------------------------------------------------------------*/
 static void
-deregister_callback(coap_request_state_t *state)
+deregister_callback(coap_callback_request_state_t *callback_state)
 {
-  LOG_DBG("Deregister callback. Response Code: %d\n",
+  coap_request_state_t *state = &callback_state->state;
+  LOG_DBG("Deregister callback. Status: %d. Response Code: %d\n",
+          state->status,
           state->response != NULL ? state->response->code : 0);
 
-  if(state->response && (DELETED_2_02 == state->response->code)) {
-    LOG_DBG("Deregistration success\n");
+  if(state->status == COAP_REQUEST_STATUS_RESPONSE && (DELETED_2_02 == state->response->code)) {
+    LOG_DBG_("Deregistration success\n");
     rd_state = DEREGISTERED;
     perform_session_callback(LWM2M_RD_CLIENT_DEREGISTERED);
   } else {
-    LOG_DBG("Deregistration failed\n");
+    LOG_DBG_("Deregistration failed\n");
     if(rd_state == DEREGISTER_SENT) {
       rd_state = DEREGISTER_FAILED;
       perform_session_callback(LWM2M_RD_CLIENT_DEREGISTER_FAILED);
     }
   }
-}
-/*---------------------------------------------------------------------------*/
-static void
-recover_from_rd_delay(void)
-{
-  /* This can be improved in the future... */
-  rd_state = INIT;
 }
 /*---------------------------------------------------------------------------*/
 /* CoAP timer callback */
@@ -718,10 +725,6 @@ periodic_process(coap_timer_t *timer)
     break;
   case REGISTRATION_SENT:
     /* just wait until the callback kicks us to the next state... */
-    if(last_rd_progress + MAX_RD_UPDATE_WAIT < coap_timer_uptime()) {
-      /* Timeout on the update - something is wrong? */
-      recover_from_rd_delay();
-    }
     break;
   case REGISTRATION_DONE:
     /* All is done! */
@@ -763,10 +766,6 @@ periodic_process(coap_timer_t *timer)
 
   case UPDATE_SENT:
     /* just wait until the callback kicks us to the next state... */
-    if(last_rd_progress + MAX_RD_UPDATE_WAIT < coap_timer_uptime()) {
-      /* Timeout on the update - something is wrong? */
-      recover_from_rd_delay();
-    }
     break;
   case DEREGISTER:
     LOG_INFO("DEREGISTER %s\n", session_info.assigned_ep);
