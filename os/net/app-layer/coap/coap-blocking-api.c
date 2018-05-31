@@ -91,21 +91,21 @@ PT_THREAD(coap_blocking_request
       state->transaction->callback = coap_blocking_request_callback;
       state->transaction->callback_data = blocking_state;
 
-      if(state->block_num > 0) {
-        coap_set_header_block2(request, state->block_num, 0,
+      if(blocking_state->state.block_num > 0) {
+        coap_set_header_block2(request, blocking_state->state.block_num, 0,
                                COAP_MAX_CHUNK_SIZE);
       }
-      state->transaction->message_len = coap_serialize_message(request,
-                                                              state->
+      blocking_state->state.transaction->message_len = coap_serialize_message(request,
+                                                              blocking_state->state.
                                                               transaction->
                                                               message);
 
-      coap_send_transaction(state->transaction);
-      LOG_DBG("Requested #%"PRIu32" (MID %u)\n", state->block_num, request->mid);
+      coap_send_transaction(blocking_state->state.transaction);
+      LOG_DBG("Requested #%"PRIu32" (MID %u)\n", blocking_state->state.block_num, request->mid);
 
       PT_YIELD_UNTIL(&blocking_state->pt, ev == PROCESS_EVENT_POLL);
 
-      if(!state->response) {
+      if(!blocking_state->state.response) {
         LOG_WARN("Server not responding\n");
         state->status = COAP_REQUEST_STATUS_TIMEOUT;
         PT_EXIT(&blocking_state->pt);

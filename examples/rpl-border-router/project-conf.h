@@ -43,4 +43,6 @@
 #define UIP_CONF_TCP 1
 #endif
 
+#define LOG_CONF_LEVEL_MAC LOG_LEVEL_DBG
+
 #endif /* PROJECT_CONF_H_ */

@@ -474,6 +474,7 @@ registration_callback(coap_callback_request_state_t *callback_state)
       LOG_DBG_("failed with code %d. Re-init network\n", state->response->code);
     }
     /* TODO Application callback? */
+    coap_remove_all_observers();
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
     LOG_DBG_("Server not responding, trying to reconnect\n");
@@ -528,6 +529,7 @@ update_callback(coap_callback_request_state_t *callback_state)
       /* Possible error response codes are 4.00 Bad request & 4.04 Not Found */
       LOG_DBG_("Failed with code %d. Retrying registration\n",
                state->response->code);
+      coap_remove_all_observers();
       rd_state = DO_REGISTRATION;
     }
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {

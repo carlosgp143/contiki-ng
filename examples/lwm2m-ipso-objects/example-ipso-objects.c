@@ -43,6 +43,7 @@
 #include "services/lwm2m/lwm2m-device.h"
 #include "services/lwm2m/lwm2m-server.h"
 #include "services/lwm2m/lwm2m-security.h"
+#include "services/lwm2m/test-observe-object.h"
 #include "services/ipso-objects/ipso-objects.h"
 #include "services/ipso-objects/ipso-sensor-template.h"
 #include "services/ipso-objects/ipso-control-template.h"
@@ -151,6 +152,7 @@ setup_lwm2m_servers(void)
     lwm2m_rd_client_register_with_bootstrap_server(&server_ep);
     lwm2m_rd_client_register_with_server(&server_ep);
   }
+  //add_several_observers(&server_ep);
 #endif /* LWM2M_SERVER_ADDRESS */
 
   lwm2m_rd_client_use_bootstrap_server(REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER);
@@ -173,6 +175,8 @@ PROCESS_THREAD(example_ipso_objects, ev, data)
   lwm2m_device_init();
   lwm2m_security_init();
   lwm2m_server_init();
+
+  lwm2m_test_observe_object_init();
 
 #if BOARD_SENSORTAG
   ipso_sensor_add(&temp_sensor);
@@ -207,6 +211,8 @@ PROCESS_THREAD(example_ipso_objects, ev, data)
       SENSORS_ACTIVATE(opt_3001_sensor);
       SENSORS_ACTIVATE(bmp_280_sensor);
 #endif /* BOARD_SENSORTAG */
+      //notify_several_observers();
+      lwm2m_test_observe_object_notify_all();
       etimer_reset(&periodic);
     }
   }
