@@ -56,6 +56,8 @@
 MEMB(observers_memb, coap_observer_t, COAP_MAX_OBSERVERS);
 LIST(unactive_observers_list);
 LIST(pending_observers_list);
+
+static coap_timer_t observers_timer;
 /*---------------------------------------------------------------------------*/
 static void coap_observers_send_notification();
 /*---------------------------------------------------------------------------*/
@@ -65,7 +67,6 @@ static coap_observer_t *
 add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
              size_t token_len, const char *uri, int uri_len)
 {
-  //printf("Add observer: %s\n", uri);
   /* Remove existing observe relationship, if any. */
   coap_remove_observer_by_uri(endpoint, uri);
 
@@ -83,13 +84,10 @@ add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
     memcpy(o->token, token, token_len);
     o->last_mid = 0;
 
-    printf("Adding observer (%u/%u) for /%s [0x%02X%02X]\n",
+    LOG_INFO("Adding observer (%u/%u) for /%s [0x%02X%02X]\n",
              list_length(unactive_observers_list) + 1, COAP_MAX_OBSERVERS,
              o->url, o->token[0], o->token[1]);
     list_add(unactive_observers_list, o);
-    printf("Unactive list length: %d\n", list_length(unactive_observers_list));
-  } else {
-    printf("Could not allocate observer\n");
   }
 
   return o;
@@ -164,7 +162,6 @@ int
 coap_remove_observer_by_uri(const coap_endpoint_t *endpoint,
                             const char *uri)
 {
-  //printf("REMOVE OBSERVER: %s\n", uri);
   int removed = 0;
   coap_observer_t *obs = NULL;
 
@@ -211,7 +208,6 @@ coap_notify_observers(coap_resource_t *resource)
 void
 coap_notify_observers_sub(coap_resource_t *resource, const char *subpath)
 {
-    //printf("NOTIFY_OBSERVERS: %s\n", subpath);
     int url_len, obs_url_len;
     char url[COAP_OBSERVER_URL_LEN];
     uint8_t sub_ok = 0;
@@ -227,19 +223,18 @@ coap_notify_observers_sub(coap_resource_t *resource, const char *subpath)
       strncpy(url, subpath, COAP_OBSERVER_URL_LEN - 1);
     } else {
       /* No resource, no subpath */
-      //printf("No resource, no subpath\n");
       return;
     }
 
     /* Ensure url is null terminated because strncpy does not guarantee this */
     url[COAP_OBSERVER_URL_LEN - 1] = '\0';
+    /* url now contains the notify URL that needs to match the observer */
 
     /* iterate over observers */
     url_len = strlen(url);
     /* Assumes lazy evaluation... */
     sub_ok = (resource == NULL) || (resource->flags & HAS_SUB_RESOURCES);
 
-    //printf("Unactive list length: %d\n", list_length(unactive_observers_list));
     for(obs = (coap_observer_t *)list_head(unactive_observers_list); obs;
       obs = obs->next) {
       obs_url_len = strlen(obs->url);
@@ -254,18 +249,16 @@ coap_notify_observers_sub(coap_resource_t *resource, const char *subpath)
             && sub_ok
             && obs->url[url_len] == '/'))
       && strncmp(url, obs->url, url_len) == 0) {
-      //printf("NOTIFY_OBSERVERS: adding to pending\n");
-      //printf("~~~~ %d\n", list_length(unactive_observers_list));
-
+   
       list_remove(unactive_observers_list, obs);
-      //printf("!!!!!! %d\n", list_length(unactive_observers_list));
-
       list_add(pending_observers_list, obs);
-      //printf("Pending list: %d\n", list_length(pending_observers_list));
+      LOG_INFO("Marked observer /%s [0x%02X%02X] as pending (Pending list length: %d, Unactive list length: %d)\n",
+                obs->url, obs->token[0], obs->token[1], list_length(pending_observers_list), list_length(unactive_observers_list));
+
       if(list_length(pending_observers_list) == 1) {
-        /* First observer, trigger notification */
-        //printf("SEND_NOTIFICATION: because it is the first one\n");
-        coap_observers_send_notification();
+        /* First observer, trigger send_notification. Timer is used to avoid stack overflow. */
+        coap_timer_set_callback(&observers_timer, coap_observers_send_notification);
+        coap_timer_set(&observers_timer, 10);        
       }
     }
   } 
@@ -276,18 +269,19 @@ coap_observers_con_notification_callback(void *data,  coap_message_t *response)
 {
   coap_observer_t *obs = (coap_observer_t*) data;
   list_remove(pending_observers_list, obs);
-  //printf("Pending list: %d\n", list_length(pending_observers_list));
   list_add(unactive_observers_list, obs);
-  coap_observers_send_notification(); /* Call again to check the pending list */
+  LOG_INFO("Marked observer /%s [0x%02X%02X] as unactive (Pending list length: %d, Unactive list length: %d)\n",
+                obs->url, obs->token[0], obs->token[1], list_length(pending_observers_list), list_length(unactive_observers_list));
+  /* Trigger send_notification to check if there are more pendings. Timer is used to avoid stack overflow. */
+  coap_timer_set_callback(&observers_timer, coap_observers_send_notification);
+  coap_timer_set(&observers_timer, 1); 
 }
 
 static void
-coap_observers_send_notification()
+coap_observers_send_notification(coap_timer_t *timer)
 {
   coap_observer_t *obs = list_head(pending_observers_list);
-  //printf("SEND_NOTIFICATION: unactive list length: %d\n", list_length(unactive_observers_list));
   if(obs) {
-    //printf("SEND_NOTIFICATION: There is an observer in the list\n");
     /* build notification */
     coap_message_t notification[1]; /* this way the message can be treated as pointer as usual */
     coap_message_t request[1]; /* this way the message can be treated as pointer as usual */
@@ -295,7 +289,6 @@ coap_observers_send_notification()
 
     /* Ensure url is null terminated because strncpy does not guarantee this */
     obs->url[COAP_OBSERVER_URL_LEN - 1] = '\0';
-    /* url now contains the notify URL that needs to match the observer */
     LOG_INFO("Notification from %s\n",obs->url);
 
     coap_init_message(notification, COAP_TYPE_NON, CONTENT_2_05, 0);
@@ -356,25 +349,22 @@ coap_observers_send_notification()
       transaction->message_len =
         coap_serialize_message(notification, transaction->message);
 
-      
-      //Add a callback to check in the list
       if(notification->type == COAP_TYPE_CON) {
+        /* If notification is confirmable, set a callback to mark as unactive and trigger send_notification again */
         transaction->callback_data = obs;
         transaction->callback = coap_observers_con_notification_callback;
         coap_send_transaction(transaction);
       } else {
+        /* If notification is non confirmable, mark as unactive after sending and trigger send_notification */
         coap_send_transaction(transaction);
         list_remove(pending_observers_list, obs);
-        //printf("Pending list: %d\n", list_length(pending_observers_list));
         list_add(unactive_observers_list, obs);
-        coap_observers_send_notification();
+        LOG_INFO("Marked observer /%s [0x%02X%02X] as unactive (Pending list length: %d, Unactive list length: %d)\n",
+                obs->url, obs->token[0], obs->token[1], list_length(pending_observers_list), list_length(unactive_observers_list));
+        coap_timer_set_callback(&observers_timer, coap_observers_send_notification);
+        coap_timer_set(&observers_timer, 10); 
       }
-      //printf("SEND_NOTIFICATION: notification sent. Pending list: %d. Unactive list: %d\n", list_length(pending_observers_list), list_length(unactive_observers_list)); 
-    } else {
-      //printf("No transaction available, remain in pending list\n");
     }
-  } else {
-    //printf("SEND_NOTIFICATION: pending list empty\n");
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -382,7 +372,6 @@ void
 coap_observe_handler(coap_resource_t *resource, coap_message_t *coap_req,
                      coap_message_t *coap_res)
 {
-  //printf("CoAP observe handler\n");
   const coap_endpoint_t *src_ep;
   coap_observer_t *obs;
 
@@ -394,7 +383,6 @@ coap_observe_handler(coap_resource_t *resource, coap_message_t *coap_req,
       if(src_ep == NULL) {
         /* No source endpoint, can not add */
       } else if(coap_req->observe == 0) {
-        //printf("!!!");
         obs = add_observer(src_ep,
                            coap_req->token, coap_req->token_len,
                            coap_req->uri_path, coap_req->uri_path_len);
