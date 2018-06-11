@@ -68,7 +68,7 @@
 #endif /* LWM2M_QUEUE_MODE_ENABLED */
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "lwm2m-rd"
 #define LOG_LEVEL  LOG_LEVEL_LWM2M
 
@@ -385,7 +385,7 @@ bootstrap_callback(coap_callback_request_state_t *callback_state)
     /* TODO Application callback? */
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) { 
-    LOG_DBG("Bootstrap failed! Retry?");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Bootstrap failed! Retry?\n");
     rd_state = DO_BOOTSTRAP;
   } else {
     LOG_DBG_("Request finished. Ignore\n");
@@ -476,7 +476,7 @@ registration_callback(coap_callback_request_state_t *callback_state)
     /* remember last progress time */
     last_rd_progress = coap_timer_uptime();
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
-    LOG_DBG_("Server not responding, trying to reconnect\n");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Server not responding, trying to reconnect\n");
     rd_state = INIT;
   } else {
     LOG_DBG_("Request finished. Ignore\n");
@@ -530,7 +530,7 @@ update_callback(coap_callback_request_state_t *callback_state)
     /* remember last progress */
     last_rd_progress = coap_timer_uptime();
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
-    LOG_DBG_("Server not responding, trying to reconnect\n");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Server not responding, trying to reconnect\n");
     rd_state = INIT;
   } else {
     LOG_DBG_("Request finished. Ignore\n");

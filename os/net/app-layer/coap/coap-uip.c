@@ -63,7 +63,7 @@
 #endif /* UIP_CONF_IPV6_RPL */
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap-uip"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -389,6 +389,7 @@ coap_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t length)
     LOG_WARN("endpoint ");
     LOG_WARN_COAP_EP(ep);
     LOG_WARN_(" not connected - dropping packet\n");
+    LOGX_ERR(LOGX_COAP_SEND_FAIL, "Packet dropped. Endpoint not connected\n");
     return -1;
   }
 
@@ -402,12 +403,13 @@ coap_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t length)
       LOG_INFO_COAP_EP(ep);
       if(ret < 0) {
         LOG_INFO_(" - error %d\n", ret);
+        LOGX_ERR(LOGX_COAP_SEND_FAIL, "Packet dropped. DTLS send failed\n");
       } else {
         LOG_INFO_(" %d/%u bytes\n", ret, length);
       }
       return ret;
     } else {
-      LOG_WARN("no DTLS context\n");
+      LOGX_ERR(LOGX_COAP_SEND_FAIL, "Packet dropped. No DTLS context\n");
       return -1;
     }
   }

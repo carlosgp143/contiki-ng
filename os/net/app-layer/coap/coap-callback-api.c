@@ -50,7 +50,7 @@
 #include <string.h>
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -97,7 +97,7 @@ coap_request_callback(void *callback_data, coap_message_t *response)
   LOG_DBG("request callback\n");
 
   if(!state->response) {
-    LOG_WARN("Server not responding giving up...\n");
+    LOGX_WARN(LOGX_COAP_SERVER_NOT_RESPONDING, "Server not responding giving up...\n");
     state->status = COAP_REQUEST_STATUS_TIMEOUT;
     callback_state->callback(callback_state);
     return;

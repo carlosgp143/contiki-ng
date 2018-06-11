@@ -49,7 +49,7 @@
 #include <stdlib.h>
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -88,6 +88,8 @@ coap_new_transaction(uint16_t mid, const coap_endpoint_t *endpoint)
     coap_endpoint_copy(&t->endpoint, endpoint);
 
     list_add(transactions_list, t); /* list itself makes sure same element is not added twice */
+  } else {
+    LOGX_WARN(LOGX_COAP_TRANSACTION_ALLOCATION_FAIL, "Could not allocate transaction");
   }
 
   return t;
