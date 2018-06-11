@@ -50,7 +50,7 @@
 #include <inttypes.h>
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -106,7 +106,7 @@ PT_THREAD(coap_blocking_request
       PT_YIELD_UNTIL(&blocking_state->pt, ev == PROCESS_EVENT_POLL);
 
       if(!state->response) {
-        LOG_WARN("Server not responding\n");
+        LOGX_WARN(LOGX_COAP_SERVER_NOT_RESPONDING, "Server not responding\n");
         state->status = COAP_REQUEST_STATUS_TIMEOUT;
         PT_EXIT(&blocking_state->pt);
       }

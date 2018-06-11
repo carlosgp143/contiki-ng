@@ -47,6 +47,7 @@
 #include "shell-commands.h"
 #include "lib/list.h"
 #include "sys/log.h"
+#include "sys/logx.h"
 #include "dev/watchdog.h"
 #include "net/ipv6/uip.h"
 #include "net/ipv6/uiplib.h"
@@ -340,6 +341,32 @@ PT_THREAD(cmd_log(struct pt *pt, shell_output_func output, char *args))
   }
 
   shell_output_log_levels(output);
+
+  PT_END(pt);
+}
+/*---------------------------------------------------------------------------*/
+static
+PT_THREAD(cmd_logx(struct pt *pt, shell_output_func output, char *args))
+{
+  char *next_args;
+  PT_BEGIN(pt);
+
+  SHELL_ARGS_INIT(args, next_args);
+
+  /* Get first arg (0/1) */
+  SHELL_ARGS_NEXT(args, next_args);
+
+  if(!strcmp(args, "1")) {
+    logx_enable_error_handler();
+    SHELL_OUTPUT(output, "Error Handler enabled\n");
+  } else if(!strcmp(args, "0")) {
+    logx_disable_error_handler();
+    SHELL_OUTPUT(output, "Error Handler disabled\n");
+  } else {
+    SHELL_OUTPUT(output, "Invalid argument: %s\n", args);
+    PT_EXIT(pt);
+  }
+
 
   PT_END(pt);
 }
@@ -779,6 +806,7 @@ const struct shell_command_t builtin_shell_commands[] = {
   { "ip-addr",              cmd_ipaddr,               "'> ip-addr': Shows all IPv6 addresses" },
   { "ip-nbr",               cmd_ip_neighbors,         "'> ip-nbr': Shows all IPv6 neighbors" },
   { "log",                  cmd_log,                  "'> log module level': Sets log level (0--4) for a given module (or \"all\"). For module \"mac\", level 4 also enables per-slot logging." },
+  { "error-handler",        cmd_logx,                 "'> error-handler-enable 0/1': Enable the error-handler (1) or disable it (0)" },
   { "ping",                 cmd_ping,                 "'> ping addr': Pings the IPv6 address 'addr'" },
 #if UIP_CONF_IPV6_RPL
   { "rpl-set-root",         cmd_rpl_set_root,         "'> rpl-set-root 0/1 [prefix]': Sets node as root (1) or not (0). A /64 prefix can be optionally specified." },

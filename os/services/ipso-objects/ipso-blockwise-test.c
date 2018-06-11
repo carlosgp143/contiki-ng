@@ -41,13 +41,10 @@
 #include "coap.h"
 #include <string.h>
 
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "coap-log.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
 
 static lwm2m_object_instance_t reg_object;
 static char junk[64];
@@ -66,7 +63,7 @@ opaque_callback(lwm2m_object_instance_t *object,
                 lwm2m_context_t *ctx, int num_to_write)
 {
   int i;
-  PRINTF("opaque-stream callback num_to_write: %d off: %d outlen: %d\n",
+  LOG_DBG("opaque-stream callback num_to_write: %d off: %"PRIu32" outlen: %d\n",
          num_to_write, ctx->offset, ctx->outbuf->len);
   for(i = 0; i < num_to_write; i++) {
     ctx->outbuf->buffer[i + ctx->outbuf->len] = '0' + (i & 31);
@@ -91,7 +88,7 @@ lwm2m_callback(lwm2m_object_instance_t *object,
 
   char *str = "just a string";
 
-  PRINTF("Got request at: %d/%d/%d lv:%d\n", ctx->object_id, ctx->object_instance_id, ctx->resource_id, ctx->level);
+  LOG_DBG("Got request at: %d/%d/%d lv:%d\n", ctx->object_id, ctx->object_instance_id, ctx->resource_id, ctx->level);
 
   if(ctx->level == 1) {
     /* Should not happen */
@@ -103,11 +100,10 @@ lwm2m_callback(lwm2m_object_instance_t *object,
   }
 
   if(ctx->operation == LWM2M_OP_READ) {
-#if DEBUG
+
     if(coap_get_header_block2(ctx->request, &num, &more, &size, &offset)) {
-      PRINTF("CoAP BLOCK2: %d/%d/%d offset:%d\n", num, more, size, offset);
+      LOG_DBG("CoAP BLOCK2: %"PRIu32"/%d/%d offset:%"PRIu32"\n", num, more, size, offset);
     }
-#endif
 
     switch(ctx->resource_id) {
     case 10000:
@@ -115,7 +111,7 @@ lwm2m_callback(lwm2m_object_instance_t *object,
       break;
     case 11000:
     case 11001:
-      PRINTF("Preparing object write\n");
+      LOG_DBG("Preparing object write\n");
       lwm2m_object_write_opaque_stream(ctx, LEN, opaque_callback);
       break;
     default:
@@ -123,7 +119,7 @@ lwm2m_callback(lwm2m_object_instance_t *object,
     }
   } else if(ctx->operation == LWM2M_OP_WRITE) {
     if(coap_get_header_block1(ctx->request, &num, &more, &size, &offset)) {
-      PRINTF("CoAP BLOCK1: %d/%d/%d offset:%d\n", num, more, size, offset);
+      LOG_DBG("CoAP BLOCK1: %"PRIu32"/%d/%d offset:%"PRIu32"\n", num, more, size, offset);
       coap_set_header_block1(ctx->response, num, 0, size);
     }
   }
@@ -134,7 +130,7 @@ void
 ipso_blockwise_test_init(void)
 {
   int i;
-  PRINTF("Starting blockwise\n");
+  LOG_INFO("Starting blockwise\n");
   reg_object.object_id = 4711;
   reg_object.instance_id = 0;
   reg_object.resource_ids = resources;

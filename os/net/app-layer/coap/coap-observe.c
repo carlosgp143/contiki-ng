@@ -49,7 +49,7 @@
 #include "lib/list.h"
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -84,6 +84,8 @@ add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
              list_length(observers_list) + 1, COAP_MAX_OBSERVERS,
              o->url, o->token[0], o->token[1]);
     list_add(observers_list, o);
+  } else {
+    LOGX_WARN(LOGX_COAP_OBSERVER_ALLOCATION_FAIL, "Could not allocate new observer\n");
   }
 
   return o;

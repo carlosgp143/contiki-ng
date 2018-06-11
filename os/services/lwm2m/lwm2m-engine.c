@@ -62,7 +62,7 @@
 #endif /* LWM2M_ENGINE_CLIENT_ENDPOINT_NAME */
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "lwm2m-eng"
 #define LOG_LEVEL  LOG_LEVEL_LWM2M
 
@@ -504,10 +504,12 @@ lwm2m_engine_set_rd_data(lwm2m_buffer_t *outbuf, int block)
 }
 /*---------------------------------------------------------------------------*/
 void
-lwm2m_engine_init(void)
+lwm2m_engine_init(bool restart)
 {
-  list_init(object_list);
-  list_init(generic_object_list);
+  if(!restart) {
+    list_init(object_list);
+    list_init(generic_object_list);
+  }
 
 #ifdef LWM2M_ENGINE_CLIENT_ENDPOINT_NAME
   const char *endpoint = LWM2M_ENGINE_CLIENT_ENDPOINT_NAME;
@@ -571,6 +573,13 @@ lwm2m_engine_init(void)
 #if LWM2M_QUEUE_MODE_ENABLED && LWM2M_QUEUE_MODE_OBJECT_ENABLED
   lwm2m_queue_mode_object_init();
 #endif
+}
+/*---------------------------------------------------------------------------*/
+void
+lwm2m_engine_stop(void)
+{
+  lwm2m_rd_client_stop();
+  coap_engine_stop();
 }
 /*---------------------------------------------------------------------------*/
 /*
@@ -1225,12 +1234,12 @@ lwm2m_engine_add_object(lwm2m_object_instance_t *object)
 
   if(object == NULL || object->callback == NULL) {
     /* Insufficient object configuration */
-    LOG_DBG("failed to register NULL object\n");
+    LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "failed to register NULL object\n");
     return 0;
   }
   if(get_object(object->object_id) != NULL) {
     /* A generic object with this id has already been registered */
-    LOG_DBG("object with id %u already registered\n", object->object_id);
+    LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "object with id %u already registered\n", object->object_id);
     return 0;
   }
 
@@ -1239,7 +1248,7 @@ lwm2m_engine_add_object(lwm2m_object_instance_t *object)
       instance = instance->next) {
     if(object->object_id == instance->object_id) {
       if(object->instance_id == instance->instance_id) {
-        LOG_DBG("object with id %u/%u already registered\n",
+        LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "object with id %u/%u already registered\n",
                instance->object_id, instance->instance_id);
         return 0;
       }
@@ -1288,18 +1297,18 @@ lwm2m_engine_add_generic_object(lwm2m_object_t *object)
      || object->impl->get_first == NULL
      || object->impl->get_next == NULL
      || object->impl->get_by_id == NULL) {
-    LOG_WARN("failed to register NULL object\n");
+    LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "failed to register NULL object\n");
     return 0;
   }
   if(get_object(object->impl->object_id) != NULL) {
     /* A generic object with this id has already been registered */
-    LOG_WARN("object with id %u already registered\n",
+    LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "object with id %u already registered\n",
              object->impl->object_id);
     return 0;
   }
   if(has_non_generic_object(object->impl->object_id)) {
     /* An object with this id has already been registered */
-    LOG_WARN("object with id %u already registered\n",
+    LOGX_WARN(LOGX_LWM2M_ADD_OBJECT_FAIL, "object with id %u already registered\n",
              object->impl->object_id);
     return 0;
   }

@@ -117,7 +117,8 @@ typedef enum {
 
   /* Erbium hooks */
   MANUAL_RESPONSE,
-  PING_RESPONSE
+  PING_RESPONSE, 
+  MANUALLY_STOPPED
 } coap_status_t;
 
 /* CoAP header option numbers */

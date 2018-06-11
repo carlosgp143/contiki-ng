@@ -54,7 +54,7 @@
 #if COAP_OBSERVE_CLIENT
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
@@ -180,7 +180,8 @@ simple_reply(coap_message_type_t type, const coap_endpoint_t *endpoint,
 
   coap_init_message(response, type, NO_ERROR, notification->mid);
   len = coap_serialize_message(response, coap_databuf());
-  coap_sendto(endpoint, coap_databuf(), len);
+  coap_engine_sendto(endpoint, coap_databuf(), len);
+  
 }
 /*----------------------------------------------------------------------------*/
 static coap_notification_flag_t

@@ -53,7 +53,7 @@
 #include "coap-transactions.h"
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "coap"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 

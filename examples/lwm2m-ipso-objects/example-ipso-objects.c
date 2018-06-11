@@ -167,7 +167,7 @@ PROCESS_THREAD(example_ipso_objects, ev, data)
   PRINTF("Starting IPSO objects example%s\n",
          REGISTER_WITH_LWM2M_BOOTSTRAP_SERVER ? " (bootstrap)" : "");
   /* Initialize the OMA LWM2M engine */
-  lwm2m_engine_init();
+  lwm2m_engine_init(false);
 
   /* Register default LWM2M objects */
   lwm2m_device_init();

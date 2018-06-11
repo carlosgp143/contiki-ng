@@ -59,6 +59,9 @@
 /* Enable client-side support for COAP observe */
 #define COAP_OBSERVE_CLIENT 1
 
+/* Define the error handler function */
+#define LOGX_ERROR_HANDLER lwm2m_error_handler 
+
 /* Definitions to enable Queue Mode, include the dynamic adaptation and change the default parameters  */
 /* #define LWM2M_QUEUE_MODE_CONF_ENABLED 1
    #define LWM2M_QUEUE_MODE_CONF_INCLUDE_DYNAMIC_ADAPTATION 1
@@ -66,5 +69,7 @@
    #define LWM2M_QUEUE_MODE_CONF_DEFAULT_CLIENT_SLEEP_TIME 10000
    #define LWM2M_QUEUE_MODE_CONF_DEFAULT_DYNAMIC_ADAPTATION_FLAG 0
    #define LWM2M_QUEUE_MODE_OBJECT_CONF_ENABLED 1 */
+
+#define ERROR_HANDLER lwm2m_error_handler
 
 #endif /* PROJECT_CONF_H_ */

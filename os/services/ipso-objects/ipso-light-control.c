@@ -47,6 +47,11 @@
 #include "lwm2m-engine.h"
 #include "ipso-control-template.h"
 
+/* Log configuration */
+#include "coap-logx.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
+
 #ifdef IPSO_LIGHT_CONTROL
 extern const struct ipso_objects_actuator IPSO_LIGHT_CONTROL;
 #endif /* IPSO_LIGHT_CONTROL */
@@ -60,9 +65,16 @@ set_value(ipso_control_t *control, uint8_t value)
 {
 #ifdef IPSO_LIGHT_CONTROL
   if(IPSO_LIGHT_CONTROL.set_dim_level) {
-    IPSO_LIGHT_CONTROL.set_dim_level(value);
+    if(IPSO_LIGHT_CONTROL.set_dim_level(value) != 0) {
+      LOGX_ERR(LOGX_IPSO_ACTUATOR_WRITE_FAIL, "Fail to write to actuator %d/%d\n", control->reg_object.object_id, control->reg_object.instance_id);
+      return LWM2M_STATUS_ERROR;
+    }
+    
   } else if(IPSO_LIGHT_CONTROL.set_on) {
-    IPSO_LIGHT_CONTROL.set_on(value);
+    if(IPSO_LIGHT_CONTROL.set_on(value) != 0) {
+      LOGX_ERR(LOGX_IPSO_ACTUATOR_WRITE_FAIL, "Fail to write to actuator %d/%d\n", control->reg_object.object_id, control->reg_object.instance_id);
+      return LWM2M_STATUS_ERROR;
+    }
   }
 #endif /* IPSO_LIGHT_CONTROL */
   return LWM2M_STATUS_OK;

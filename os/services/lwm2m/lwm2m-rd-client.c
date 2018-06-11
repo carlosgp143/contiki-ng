@@ -68,7 +68,7 @@
 #endif /* LWM2M_QUEUE_MODE_ENABLED */
 
 /* Log configuration */
-#include "coap-log.h"
+#include "coap-logx.h"
 #define LOG_MODULE "lwm2m-rd"
 #define LOG_LEVEL  LOG_LEVEL_LWM2M
 
@@ -384,7 +384,7 @@ bootstrap_callback(coap_callback_request_state_t *callback_state)
     /* TODO Application callback? */
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) { 
-    LOG_DBG_("Server not responding! Retry?");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Bootstrap failed! Retry?\n");
     rd_state = DO_BOOTSTRAP;
   } else if(state->status == COAP_REQUEST_STATUS_FINISHED) {
     LOG_DBG_("Request finished. Ignore\n");
@@ -476,7 +476,7 @@ registration_callback(coap_callback_request_state_t *callback_state)
     /* TODO Application callback? */
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
-    LOG_DBG_("Server not responding, trying to reconnect\n");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Server not responding, trying to reconnect\n");
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_FINISHED){
     LOG_DBG_("Request finished. Ignore\n");
@@ -531,7 +531,7 @@ update_callback(coap_callback_request_state_t *callback_state)
       rd_state = DO_REGISTRATION;
     }
   } else if(state->status == COAP_REQUEST_STATUS_TIMEOUT) {
-    LOG_DBG_("Server not responding, trying to reconnect\n");
+    LOGX_ERR(LOGX_LWM2M_SERVER_NOT_RESPONDING, "Server not responding, trying to reconnect\n");
     rd_state = INIT;
   } else if(state->status == COAP_REQUEST_STATUS_FINISHED){
     LOG_DBG_("Request finished. Ignore\n");
@@ -814,6 +814,15 @@ lwm2m_rd_client_init(const char *ep)
 #if LWM2M_QUEUE_MODE_ENABLED
   coap_timer_set_callback(&queue_mode_client_awake_timer, queue_mode_awake_timer_callback);
 #endif
+}
+/*---------------------------------------------------------------------------*/
+void
+lwm2m_rd_client_stop()
+{
+  coap_timer_stop(&rd_timer);
+  #if LWM2M_QUEUE_MODE_ENABLED
+  coap_timer_stop(&queue_mode_client_awake_timer);
+  #endif
 }
 /*---------------------------------------------------------------------------*/
 static void
