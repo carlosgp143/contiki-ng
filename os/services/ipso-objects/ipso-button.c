@@ -46,13 +46,10 @@
 #include "lwm2m-object.h"
 #include "lwm2m-engine.h"
 
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "coap-logx.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
 
 #define IPSO_INPUT_STATE     5500
 #define IPSO_INPUT_COUNTER   5501
@@ -101,7 +98,7 @@ static lwm2m_object_instance_t reg_object = {
 static int
 read_state(void)
 {
-  PRINTF("Read button state: %d\n", input_state);
+  LOG_INFO("Read button state: %d\n", input_state);
   return input_state;
 }
 /*---------------------------------------------------------------------------*/
@@ -128,6 +125,7 @@ lwm2m_callback(lwm2m_object_instance_t *object,
       lwm2m_object_write_string(ctx, "button", strlen("button"));
       break;
     default:
+      LOGX_ERR(LOGX_IPSO_SENSOR_READ_FAIL, "Fail to read from sensor %d/%d\n", object->object_id, object->instance_id);
       return LWM2M_STATUS_ERROR;
     }
   } else if(ctx->operation == LWM2M_OP_EXECUTE) {

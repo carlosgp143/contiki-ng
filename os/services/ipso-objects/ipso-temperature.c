@@ -47,6 +47,11 @@
 #include "lwm2m-object.h"
 #include "lwm2m-engine.h"
 
+/* Log configuration */
+#include "coap-logx.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
+
 #ifdef IPSO_TEMPERATURE
 extern const struct ipso_objects_sensor IPSO_TEMPERATURE;
 #endif /* IPSO_TEMPERATURE */
@@ -79,6 +84,9 @@ get_temp_value(const ipso_sensor_t *s, int32_t *value)
     return LWM2M_STATUS_OK;
   }
 #endif /* IPSO_TEMPERATURE */
+
+  LOGX_ERR(LOGX_IPSO_SENSOR_READ_FAIL, "Fail to read from sensor %d/%d\n", s->object_id, s->instance_id);
+
   return LWM2M_STATUS_ERROR;
 }
 /*---------------------------------------------------------------------------*/

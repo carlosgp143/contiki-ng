@@ -48,13 +48,10 @@
 #include <inttypes.h>
 #include <string.h>
 
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "coap-logx.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
 
 #define IPSO_ONOFF        5850
 #define IPSO_DIMMER       5851
@@ -119,6 +116,9 @@ ipso_control_set_value(ipso_control_t *control, uint8_t value)
       }
     }
   }
+  if(status != LWM2M_STATUS_OK) {
+    LOGX_ERR(LOGX_IPSO_ACTUATOR_WRITE_FAIL, "Fail to write to actuator %d/%d\n", control->reg_object.object_id, control->reg_object.instance_id);
+  }
   return status;
 }
 /*---------------------------------------------------------------------------*/
@@ -144,7 +144,7 @@ lwm2m_callback(lwm2m_object_instance_t *object, lwm2m_context_t *ctx)
       if(ipso_control_is_on(control)) {
         v += (coap_timer_uptime() - control->last_on_time) / 1000;
       }
-      PRINTF("ON-TIME: %"PRId32"   (last on: %"PRIu32"\n", v, control->on_time);
+      LOG_INFO("ON-TIME: %"PRId32"   (last on: %"PRIu32"\n", v, control->on_time);
       break;
     default:
       return LWM2M_STATUS_ERROR;

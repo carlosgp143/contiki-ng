@@ -48,6 +48,8 @@
 #include "lwm2m-object.h"
 #include "lwm2m-queue-mode-conf.h"
 
+#include <stdbool.h>
+
 #define LWM2M_FLOAT32_BITS  10
 #define LWM2M_FLOAT32_FRAC (1L << LWM2M_FLOAT32_BITS)
 
@@ -61,7 +63,9 @@ typedef enum {
   LWM2M_OLD_OPAQUE  = 1544
 } lwm2m_content_format_t;
 
-void lwm2m_engine_init(void);
+void lwm2m_engine_init(bool restart);
+
+void lwm2m_engine_stop(void);
 
 int lwm2m_engine_set_rd_data(lwm2m_buffer_t *outbuf, int block);
 

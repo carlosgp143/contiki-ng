@@ -77,6 +77,7 @@ typedef struct coap_transaction {
 coap_transaction_t *coap_new_transaction(uint16_t mid, const coap_endpoint_t *ep);
 void coap_send_transaction(coap_transaction_t *t);
 void coap_clear_transaction(coap_transaction_t *t);
+void coap_clear_all_transactions(void);
 coap_transaction_t *coap_get_transaction_by_mid(uint16_t mid);
 
 #endif /* COAP_TRANSACTIONS_H_ */

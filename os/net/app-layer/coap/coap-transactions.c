@@ -100,7 +100,7 @@ coap_send_transaction(coap_transaction_t *t)
 {
   LOG_DBG("Sending transaction %u\n", t->mid);
 
-  coap_sendto(&t->endpoint, t->message, t->message_len);
+  coap_engine_sendto(&t->endpoint, t->message, t->message_len);
 
   if(COAP_TYPE_CON ==
      ((COAP_HEADER_TYPE_MASK & t->message[0]) >> COAP_HEADER_TYPE_POSITION)) {
@@ -153,6 +153,21 @@ coap_clear_transaction(coap_transaction_t *t)
     coap_timer_stop(&t->retrans_timer);
     list_remove(transactions_list, t);
     memb_free(&transactions_memb, t);
+  }
+}
+/*---------------------------------------------------------------------------*/
+void
+coap_clear_all_transactions(void)
+{
+  LOG_DBG("Clearing all transaction currently in use\n");
+
+  coap_transaction_t *t = (coap_transaction_t*) list_head(transactions_list);
+  coap_transaction_t *t_aux = t;
+
+  while(t) {    
+    t_aux = t->next;
+    coap_clear_transaction(t);
+    t = t_aux;
   }
 }
 /*---------------------------------------------------------------------------*/

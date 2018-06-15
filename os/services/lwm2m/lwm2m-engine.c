@@ -504,10 +504,12 @@ lwm2m_engine_set_rd_data(lwm2m_buffer_t *outbuf, int block)
 }
 /*---------------------------------------------------------------------------*/
 void
-lwm2m_engine_init(void)
+lwm2m_engine_init(bool restart)
 {
-  list_init(object_list);
-  list_init(generic_object_list);
+  if(!restart) {
+    list_init(object_list);
+    list_init(generic_object_list);
+  }
 
 #ifdef LWM2M_ENGINE_CLIENT_ENDPOINT_NAME
   const char *endpoint = LWM2M_ENGINE_CLIENT_ENDPOINT_NAME;
@@ -571,6 +573,13 @@ lwm2m_engine_init(void)
 #if LWM2M_QUEUE_MODE_ENABLED && LWM2M_QUEUE_MODE_OBJECT_ENABLED
   lwm2m_queue_mode_object_init();
 #endif
+}
+/*---------------------------------------------------------------------------*/
+void
+lwm2m_engine_stop(void)
+{
+  lwm2m_rd_client_stop();
+  coap_engine_stop();
 }
 /*---------------------------------------------------------------------------*/
 /*

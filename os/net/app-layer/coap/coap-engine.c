@@ -54,6 +54,10 @@
 #define LOG_MODULE "coap-eng"
 #define LOG_LEVEL  LOG_LEVEL_COAP
 
+#define IS_INITIALIZED_MASK   0x01
+#define MANUALLY_STOPPED_MASK 0x02
+
+
 static void process_callback(coap_timer_t *t);
 
 /*
@@ -70,7 +74,9 @@ static int invoke_coap_resource_service(coap_message_t *request,
 /*---------------------------------------------------------------------------*/
 LIST(coap_handlers);
 LIST(coap_resource_services);
-static uint8_t is_initialized = 0;
+static uint8_t coap_flags = 0x00; /* Bit 0: is initialized -> avoid double initialization
+                                   * Bit 1: manually stopped -> ignore traffic 
+                                   */
 
 /*---------------------------------------------------------------------------*/
 /*- CoAP service handlers---------------------------------------------------*/
@@ -149,6 +155,10 @@ coap_receive(const coap_endpoint_t *src,
   static coap_message_t response[1];
   coap_transaction_t *transaction = NULL;
   coap_handler_status_t status;
+
+  if(((coap_flags & MANUALLY_STOPPED_MASK)>>1)) {
+    return MANUALLY_STOPPED;
+  }
 
   coap_status_code = coap_parse_message(message, payload, payload_length);
   coap_set_src_endpoint(message, src);
@@ -370,10 +380,11 @@ void
 coap_engine_init(void)
 {
   /* avoid initializing twice */
-  if(is_initialized) {
+  if(coap_flags & IS_INITIALIZED_MASK) {
     return;
   }
-  is_initialized = 1;
+  coap_flags |= IS_INITIALIZED_MASK;
+  coap_flags &= ~MANUALLY_STOPPED_MASK;
 
   LOG_INFO("Starting CoAP engine...\n");
 
@@ -384,6 +395,22 @@ coap_engine_init(void)
 
   coap_transport_init();
   coap_init_connection();
+}
+/*---------------------------------------------------------------------------*/
+void
+coap_engine_stop(void)
+{
+  coap_flags &= ~IS_INITIALIZED_MASK;
+  coap_flags |= MANUALLY_STOPPED_MASK;
+  coap_clear_all_transactions();
+}
+/*---------------------------------------------------------------------------*/
+int coap_engine_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t len)
+{
+  if(!((coap_flags & MANUALLY_STOPPED_MASK)>>1)) {
+    return coap_sendto(ep, data, len);
+  }
+  return -1;
 }
 /*---------------------------------------------------------------------------*/
 /**
@@ -504,7 +531,7 @@ process_callback(coap_timer_t *t)
     LOG_DBG("Periodic: timer expired for /%s (period: %"PRIu32")\n",
             resource->url, resource->periodic->period);
 
-    if(!is_initialized) {
+    if(!(coap_flags & IS_INITIALIZED_MASK)) {
       /* CoAP has not yet been initialized. */
     } else if(resource->periodic->periodic_handler) {
       /* Call the periodic_handler function. */

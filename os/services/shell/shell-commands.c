@@ -357,10 +357,10 @@ PT_THREAD(cmd_logx(struct pt *pt, shell_output_func output, char *args))
   SHELL_ARGS_NEXT(args, next_args);
 
   if(!strcmp(args, "1")) {
-    enable_error_handler();
+    logx_enable_error_handler();
     SHELL_OUTPUT(output, "Error Handler enabled\n");
   } else if(!strcmp(args, "0")) {
-    disable_error_handler();
+    logx_disable_error_handler();
     SHELL_OUTPUT(output, "Error Handler disabled\n");
   } else {
     SHELL_OUTPUT(output, "Invalid argument: %s\n", args);

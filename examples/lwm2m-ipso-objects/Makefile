@@ -1,6 +1,6 @@
 CONTIKI_PROJECT = example-ipso-objects
 
-CONTIKI_SOURCEFILES += serial-protocol.c example-ipso-temperature.c
+CONTIKI_SOURCEFILES += serial-protocol.c example-ipso-temperature.c error_handler_impl.c
 
 PLATFORMS_EXCLUDE = sky
 

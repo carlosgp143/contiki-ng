@@ -46,6 +46,11 @@
 #include <string.h>
 #include <stdio.h>
 
+/* Log configuration */
+#include "coap-logx.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
+
 #define IPSO_SENSOR_VALUE     5700
 #define IPSO_SENSOR_UNIT      5701
 #define IPSO_SENSOR_MIN_VALUE 5601
@@ -184,6 +189,8 @@ lwm2m_callback(lwm2m_object_instance_t *object,
           if(sensor->get_value_in_millis(sensor, &v) == LWM2M_STATUS_OK) {
             update_last_value(value, v, 0);
             write_float32fix(ctx, value->last_value);
+          } else {
+            LOGX_ERR(LOGX_IPSO_SENSOR_READ_FAIL, "Fail to read from sensor %d/%d\n", sensor->object_id, sensor->instance_id);
           }
         }
         break;

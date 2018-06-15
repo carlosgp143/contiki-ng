@@ -48,13 +48,10 @@
 #include "dev/leds.h"
 #include <stdint.h>
 
-#define DEBUG 0
-#if DEBUG
-#include <stdio.h>
-#define PRINTF(...) printf(__VA_ARGS__)
-#else
-#define PRINTF(...)
-#endif
+/* Log configuration */
+#include "coap-log.h"
+#define LOG_MODULE "ipso-obj"
+#define LOG_LEVEL  LOG_LEVEL_LWM2M
 
 #if LEDS_LEGACY_API
 #if LEDS_ALL & LEDS_BLUE || LEDS_ALL & LEDS_RED || LEDS_ALL & LEDS_BLUE
@@ -125,7 +122,7 @@ ipso_leds_control_init(void)
     ipso_control_add(c);
   }
 
-  PRINTF("IPSO leds control initialized with %u instances\n",
+  LOG_INFO("Leds control initialized with %u instances\n",
          LEDS_CONTROL_NUMBER);
 }
 /*---------------------------------------------------------------------------*/

@@ -52,7 +52,11 @@ typedef enum {
     LOGX_COAP_SERVER_NOT_RESPONDING           = 0x03,
     LOGX_COAP_SEND_FAIL                       = 0x04,
     LOGX_COAP_TRANSACTION_ALLOCATION_FAIL     = 0x05,
-    LOGX_COAP_OBSERVER_ALLOCATION_FAIL        = 0x06
+    LOGX_COAP_OBSERVER_ALLOCATION_FAIL        = 0x06,
+
+    /* IPSO Objects errors */
+    LOGX_IPSO_SENSOR_READ_FAIL                = 0x07,
+    LOGX_IPSO_ACTUATOR_WRITE_FAIL             = 0x08
     
 } logx_error_type_t;
 

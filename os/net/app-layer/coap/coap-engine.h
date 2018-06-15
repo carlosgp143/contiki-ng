@@ -49,6 +49,7 @@ typedef struct coap_periodic_resource_s coap_periodic_resource_t;
 
 #include "coap.h"
 #include "coap-timer.h"
+#include <stdbool.h>
 
 typedef enum {
   COAP_HANDLER_STATUS_CONTINUE,
@@ -76,8 +77,12 @@ void coap_remove_handler(coap_handler_t *handler);
 
 void coap_engine_init(void);
 
+void coap_engine_stop(void);
+
 int coap_receive(const coap_endpoint_t *src,
                  uint8_t *payload, uint16_t payload_length);
+
+int coap_engine_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t len);
 
 coap_handler_status_t coap_call_handlers(coap_message_t *request,
                                          coap_message_t *response,

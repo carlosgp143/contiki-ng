@@ -811,6 +811,15 @@ lwm2m_rd_client_init(const char *ep)
 #endif
 }
 /*---------------------------------------------------------------------------*/
+void
+lwm2m_rd_client_stop()
+{
+  coap_timer_stop(&rd_timer);
+  #if LWM2M_QUEUE_MODE_ENABLED
+  coap_timer_stop(&queue_mode_client_awake_timer);
+  #endif
+}
+/*---------------------------------------------------------------------------*/
 static void
 check_periodic_observations(void)
 {
