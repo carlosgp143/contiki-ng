@@ -115,7 +115,7 @@ remove_notification_path(notification_path_t *path)
 }
 /*---------------------------------------------------------------------------*/
 void
-lwm2m_notification_queue_add_notification_path(uint16_t object_id, uint16_t instance_id, uint16_t resource_id)
+lwm2m_notification_queue_add_notification_path(uint16_t object_id, uint16_t instance_id, uint16_t resource_id, int level)
 {
   if(is_notification_path_present(object_id, instance_id, resource_id)) {
     LOG_DBG("Notification path already present, not queueing it\n");
@@ -127,9 +127,20 @@ lwm2m_notification_queue_add_notification_path(uint16_t object_id, uint16_t inst
     return;
   }
   path_object->reduced_path[0] = object_id;
-  path_object->reduced_path[1] = instance_id;
-  path_object->reduced_path[2] = resource_id;
-  path_object->level = 3;
+
+  switch(level) {
+    case 2:
+      path_object->reduced_path[1] = instance_id;
+      break;
+    case 3:
+      path_object->reduced_path[1] = instance_id;
+      path_object->reduced_path[2] = resource_id;
+      break;
+    default:
+      break;
+  }
+
+  path_object->level = level;
   list_add(notification_paths_queue, path_object);
   LOG_DBG("Notification path added to the list: %u/%u/%u\n", object_id, instance_id, resource_id);
 }

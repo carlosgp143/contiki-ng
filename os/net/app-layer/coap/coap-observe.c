@@ -65,10 +65,12 @@ static void coap_observers_send_notification();
 /*---------------------------------------------------------------------------*/
 static coap_observer_t *
 add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
-             size_t token_len, const char *uri, int uri_len)
+             size_t token_len, const char *uri, int uri_len, uint16_t accept_format)
 {
   /* Remove existing observe relationship, if any. */
-  coap_remove_observer_by_uri(endpoint, uri);
+  char uri_aux [uri_len];
+  memcpy(uri_aux, uri, uri_len);
+  coap_remove_observer_by_uri(endpoint, uri_aux);
 
   coap_observer_t *o = memb_alloc(&observers_memb);
 
@@ -83,6 +85,7 @@ add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
     o->token_len = token_len;
     memcpy(o->token, token, token_len);
     o->last_mid = 0;
+    o->accept_format = accept_format;
 
     LOG_INFO("Adding observer (%u/%u) for /%s [0x%02X%02X]\n",
              list_length(unactive_observers_list) + 1, COAP_MAX_OBSERVERS,
@@ -164,16 +167,20 @@ coap_remove_observer_by_uri(const coap_endpoint_t *endpoint,
 {
   int removed = 0;
   coap_observer_t *obs = NULL;
+  coap_observer_t *obs_aux = NULL;
 
-  for(obs = (coap_observer_t *)list_head(unactive_observers_list); obs;
-      obs = obs->next) {
+  obs = (coap_observer_t *)list_head(unactive_observers_list);
+
+  while(obs) {
     LOG_DBG("Remove check URL %p\n", uri);
+    obs_aux = obs->next;
     if((endpoint == NULL
         || (coap_endpoint_cmp(&obs->endpoint, endpoint)))
-       && (obs->url == uri || memcmp(obs->url, uri, strlen(obs->url)) == 0)) {
+       && (obs->url == uri || memcmp(obs->url, uri, (strlen(obs->url) >= strlen(uri) ? strlen(uri) : strlen(obs->url)) ) == 0)) {
       coap_remove_observer(obs);
       removed++;
     }
+    obs = obs_aux;
   }
   return removed;
 }
@@ -295,6 +302,7 @@ coap_observers_send_notification(coap_timer_t *timer)
     /* create a "fake" request for the URI */
     coap_init_message(request, COAP_TYPE_CON, COAP_GET, 0);
     coap_set_header_uri_path(request, obs->url);
+    coap_set_header_accept(request, obs->accept_format);
 
     coap_transaction_t *transaction = NULL;
 
@@ -383,9 +391,11 @@ coap_observe_handler(coap_resource_t *resource, coap_message_t *coap_req,
       if(src_ep == NULL) {
         /* No source endpoint, can not add */
       } else if(coap_req->observe == 0) {
+        unsigned int accept_format;
+        coap_get_header_accept(coap_req, &accept_format);
         obs = add_observer(src_ep,
                            coap_req->token, coap_req->token_len,
-                           coap_req->uri_path, coap_req->uri_path_len);
+                           coap_req->uri_path, coap_req->uri_path_len, accept_format);
         if(obs) {
           coap_set_header_observe(coap_res, (obs->obs_counter)++);
           /* mask out to keep the CoAP observe option length <= 3 bytes */
@@ -424,7 +434,7 @@ coap_has_observers(char *path)
 
   for(obs = (coap_observer_t *)list_head(unactive_observers_list); obs;
       obs = obs->next) {
-    if((strncmp(obs->url, path, strlen(path))) == 0) {
+    if((strncmp(obs->url, path, strlen(obs->url))) == 0) {
       return 1;
     }
   }

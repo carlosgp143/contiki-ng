@@ -1064,7 +1064,6 @@ perform_multi_resource_write_op(lwm2m_object_t *object,
 
   if(format == LWM2M_JSON || format == LWM2M_OLD_JSON) {
     struct json_data json;
-
     while(lwm2m_json_next_token(ctx, &json)) {
       LOG_DBG("JSON: '");
       for(i = 0; i < json.name_len; i++) {
@@ -1668,17 +1667,24 @@ void
 lwm2m_notify_object_observers(lwm2m_object_instance_t *obj,
                                    uint16_t resource)
 {
+  int level = 1;
   char path[20]; /* 60000/60000/60000 */
   if(obj != NULL) {
-    snprintf(path, 20, "%d/%d/%d", obj->object_id, obj->instance_id, resource);
+    snprintf(path, 20, "%d/%d", obj->object_id, obj->instance_id);
+    level = 2;
+    if(!coap_has_observers(path)) {
+      snprintf(path, 20, "%d/%d/%d", obj->object_id, obj->instance_id, resource);
+      level = 3;
+    }
   }
 
+  LOG_INFO("Sending notification for path: %s with level: %d\n", path, level);
+
 #if LWM2M_QUEUE_MODE_ENABLED
-  
   if(coap_has_observers(path)) {
     /* Client is sleeping -> add the notification to the list */
     if(!lwm2m_rd_client_is_client_awake()) {
-      lwm2m_notification_queue_add_notification_path(obj->object_id, obj->instance_id, resource);
+      lwm2m_notification_queue_add_notification_path(obj->object_id, obj->instance_id, resource, level);
 
       /* if it is the first notification -> wake up and send update */
       if(!lwm2m_queue_mode_is_waked_up_by_notification()) {
@@ -1691,6 +1697,7 @@ lwm2m_notify_object_observers(lwm2m_object_instance_t *obj,
     }
   }
 #else 
+  // Check if there is an observer for an instance and if that is the case, notify with that path */
   lwm2m_send_notification(path);
 #endif
 }
