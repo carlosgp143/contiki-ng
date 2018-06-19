@@ -57,7 +57,7 @@ typedef struct notification_path {
 
 void lwm2m_notification_queue_init(void);
 
-void lwm2m_notification_queue_add_notification_path(uint16_t object_id, uint16_t instance_id, uint16_t resource_id);
+void lwm2m_notification_queue_add_notification_path(uint16_t object_id, uint16_t instance_id, uint16_t resource_id, int level);
 
 void lwm2m_notification_queue_send_notifications();
 

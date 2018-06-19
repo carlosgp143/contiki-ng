@@ -59,6 +59,8 @@ typedef struct coap_observer {
   uint8_t token[COAP_TOKEN_LEN];
   uint16_t last_mid;
 
+  uint16_t accept_format;
+
   int32_t obs_counter;
 } coap_observer_t;
 
