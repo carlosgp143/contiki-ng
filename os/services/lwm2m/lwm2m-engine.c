@@ -1667,9 +1667,16 @@ void
 lwm2m_notify_object_observers(lwm2m_object_instance_t *obj,
                                    uint16_t resource)
 {
-  int level = 1;
+  if(obj == NULL) {
+    return;
+  }
+
+  int level = 0;
   char path[20]; /* 60000/60000/60000 */
-  if(obj != NULL) {
+
+  snprintf(path, 20, "%d", obj->object_id);
+  level = 1;
+  if(!coap_has_observers(path)) {
     snprintf(path, 20, "%d/%d", obj->object_id, obj->instance_id);
     level = 2;
     if(!coap_has_observers(path)) {

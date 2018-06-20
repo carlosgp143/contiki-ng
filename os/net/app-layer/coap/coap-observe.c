@@ -70,6 +70,7 @@ add_observer(const coap_endpoint_t *endpoint, const uint8_t *token,
   /* Remove existing observe relationship, if any. */
   char uri_aux [uri_len];
   memcpy(uri_aux, uri, uri_len);
+  uri_aux [uri_len] = 0;
   coap_remove_observer_by_uri(endpoint, uri_aux);
 
   coap_observer_t *o = memb_alloc(&observers_memb);
