@@ -45,6 +45,7 @@
 #ifndef LWM2M_ENGINE_H
 #define LWM2M_ENGINE_H
 
+#include "lib/list.h"
 #include "lwm2m-object.h"
 #include "lwm2m-queue-mode-conf.h"
 
@@ -81,6 +82,10 @@ struct lwm2m_object_instance {
   /* an array of resource IDs for discovery, etc */
   const lwm2m_resource_id_t *resource_ids;
   uint16_t resource_count;
+
+  /* A list of resource notification attributes */
+  LIST_STRUCT(resource_attrs);
+
   /* the callback for requests */
   lwm2m_object_instance_callback_t callback;
   lwm2m_resource_dim_callback_t resource_dim_callback;

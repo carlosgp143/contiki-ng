@@ -70,6 +70,32 @@ typedef uint32_t lwm2m_resource_id_t;
 #define RW(x) (x | LWM2M_RESOURCE_READ | LWM2M_RESOURCE_WRITE)
 #define EX(x) (x | LWM2M_RESOURCE_EXECUTE)
 
+/* The notification attributes that a resource or an object instance can have
+   pmin, pmax, gt, lt, st */
+
+/* Attributes flags to add on the resource  */
+enum {
+  LWM2M_ATTR_PMIN    = 0x00,
+  LWM2M_ATTR_PMAX    = 0x01,
+  LWM2M_ATTR_GT      = 0x02,
+  LWM2M_ATTR_LT      = 0x03,
+  LWM2M_ATTR_ST      = 0x04
+};
+
+typedef uint8_t lwm2m_attribute_type_t;
+
+/* If this resource id is given, then the attribute is associated with the whole instance */
+#define LWM2M_OBJECT_INSTANCE_ATTRIBUTE 0xFFFF
+
+typedef struct lwm2m_notification_attribute lwm2m_notification_attribute_t;
+
+struct lwm2m_notification_attribute {
+  lwm2m_notification_attribute_t *next;
+  uint16_t resource_id;
+  lwm2m_attribute_type_t type;
+  uint16_t value;
+};
+
 #define LWM2M_OBJECT_SECURITY_ID                0
 #define LWM2M_OBJECT_SERVER_ID                  1
 #define LWM2M_OBJECT_ACCESS_CONTROL_ID          2

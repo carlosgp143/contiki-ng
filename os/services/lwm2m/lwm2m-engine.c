@@ -44,6 +44,7 @@
 
 #include "lwm2m-engine.h"
 #include "lwm2m-object.h"
+#include "lwm2m-notification-attributes.h"
 #include "lwm2m-device.h"
 #include "lwm2m-plain-text.h"
 #include "lwm2m-json.h"
@@ -1202,6 +1203,63 @@ perform_multi_resource_write_op(lwm2m_object_t *object,
   return LWM2M_STATUS_OK;
 }
 /*---------------------------------------------------------------------------*/
+static uint16_t 
+parse_attr_value(const char* str, int len)
+{
+    int i;
+    int ret = 0;
+    for(i = 0; i < len; ++i)
+    {
+        ret = ret * 10 + (str[i] - '0');
+    }
+    return ret;
+}
+/*---------------------------------------------------------------------------*/
+static lwm2m_status_t
+perform_write_attr (lwm2m_object_instance_t *instance, lwm2m_context_t *ctx)
+{
+  uint16_t resource;
+  const char *value_read;
+  uint16_t value;
+  int size;
+  if (ctx->level == 3) {
+    resource = ctx->resource_id;
+  } else {
+    resource = 0xFFFF;
+  }
+
+  size = coap_get_query_variable(ctx->request, "pmin", &value_read);
+  if(size) {
+    value = parse_attr_value(value_read, size);
+    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMIN, value);
+  }
+
+  size = coap_get_query_variable(ctx->request, "pmax", &value_read);
+  if(size) {
+    value = parse_attr_value(value_read, size);
+    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMAX, value);
+  }
+
+  size = coap_get_query_variable(ctx->request, "gt", &value_read);
+  if(size) {
+    value = parse_attr_value(value_read, size);
+    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_GT, value);
+  }
+
+  size = coap_get_query_variable(ctx->request, "lt", &value_read);
+  if(size) {
+    value = parse_attr_value(value_read, size);
+    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_LT , value);
+  }
+
+  size = coap_get_query_variable(ctx->request, "st", &value_read);
+  if(size) {
+    value = parse_attr_value(value_read, size);
+    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_ST , value);
+  }
+  return LWM2M_STATUS_OK;
+}
+/*---------------------------------------------------------------------------*/
 lwm2m_object_instance_t *
 lwm2m_engine_get_instance_buffer(void)
 {
@@ -1221,6 +1279,8 @@ lwm2m_engine_add_object(lwm2m_object_instance_t *object)
   uint16_t min_id = 0xffff;
   uint16_t max_id = 0;
   int found = 0;
+
+  LIST_STRUCT_INIT(object, resource_attrs);
 
   if(object == NULL || object->callback == NULL) {
     /* Insufficient object configuration */
@@ -1503,10 +1563,16 @@ lwm2m_queue_mode_request_received();
   lwm2m_engine_select_reader(&context, format);
   lwm2m_engine_select_writer(&context, accept);
 
+  const char* query;
+
   switch(coap_get_method_type(request)) {
   case METHOD_PUT:
-    /* can also be write atts */
-    context.operation = LWM2M_OP_WRITE;
+    if(coap_get_header_uri_query(request, &query)) {
+      context.operation = LWM2M_OP_WRITE_ATTR;
+      printf("PUT operation with query: is write attributes\n");
+    } else {
+      context.operation = LWM2M_OP_WRITE;
+    }
     coap_set_status_code(response, CHANGED_2_04);
     break;
   case METHOD_POST:
@@ -1573,6 +1639,9 @@ lwm2m_queue_mode_request_received();
     break;
   case LWM2M_OP_WRITE:
     success = perform_multi_resource_write_op(object, instance, &context, format);
+    break;
+  case LWM2M_OP_WRITE_ATTR:
+    success = perform_write_attr(instance, &context);
     break;
   case LWM2M_OP_EXECUTE:
     success = call_instance(instance, &context);
