@@ -54,5 +54,7 @@ bool lwm2m_notification_attributes_get(uint16_t *value, lwm2m_object_instance_t 
 
 bool lwm2m_notification_attributes_remove(lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type);
 
+void lwm2m_notification_attributes_print(lwm2m_object_instance_t *object);
+
 #endif /* LWM2M_NOTIFICATION_ATTRIBUTES_H_ */
 /** @} */

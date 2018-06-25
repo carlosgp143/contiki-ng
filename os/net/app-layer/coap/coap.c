@@ -274,6 +274,26 @@ coap_get_variable(const char *buffer, size_t length, const char *name,
   return 0;
 }
 /*---------------------------------------------------------------------------*/
+static int
+coap_has_variable(const char *buffer, size_t length, const char *name)
+{
+  const char *start = NULL;
+  const char *end = NULL;
+  size_t name_len = 0;
+
+  name_len = strlen(name);
+  end = buffer + length;
+
+  for(start = buffer; start + name_len < end; ++start) {
+    if((start == buffer || start[-1] == '&') && start[name_len] == '='
+       && strncmp(name, start, name_len) == 0) {
+
+      return 1;
+    }
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
 /*- Internal API ------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 void
@@ -700,6 +720,16 @@ coap_get_query_variable(coap_message_t *coap_pkt,
   }
   return 0;
 }
+/*---------------------------------------------------------------------------*/
+int
+coap_has_query_variable(coap_message_t *coap_pkt, const char *name)
+{
+  if(coap_is_option(coap_pkt, COAP_OPTION_URI_QUERY)) {
+    return coap_has_variable(coap_pkt->uri_query, coap_pkt->uri_query_len, name);
+  }
+  return 0;
+}
+/*---------------------------------------------------------------------------*/
 int
 coap_get_post_variable(coap_message_t *coap_pkt,
                        const char *name, const char **output)

@@ -49,7 +49,7 @@
 #define LOG_MODULE "lwm2m-attr"
 #define LOG_LEVEL  LOG_LEVEL_LWM2M
 
-#define LWM2M_MAX_NOTIFICATION_ATTRIBUTES 10
+#define LWM2M_MAX_NOTIFICATION_ATTRIBUTES 100
 
 /*---------------------------------------------------------------------------*/
 MEMB(attribute_memb, lwm2m_notification_attribute_t, LWM2M_MAX_NOTIFICATION_ATTRIBUTES);
@@ -76,7 +76,7 @@ lwm2m_notification_attributes_add(lwm2m_object_instance_t *object, uint16_t reso
 {
 
 	/* First remove if the resource already has an attribute */
-	//lwm2m_notification_attributes_remove(object, resource, type);
+	lwm2m_notification_attributes_remove(object, resource, type);
 
 	lwm2m_notification_attribute_t *attr = memb_alloc(&attribute_memb);
 	if(attr) {
@@ -85,7 +85,7 @@ lwm2m_notification_attributes_add(lwm2m_object_instance_t *object, uint16_t reso
 		attr->type = type;
 		attr->value = value;
 		list_add(object->resource_attrs, attr);
-		printf("Attribute %"PRIu8" added for resource: %"PRIu16"/%"PRIu16"/%"PRIu16" with value: %"PRIu16"\n", type, object->object_id, object->instance_id, resource, value);
+		LOG_INFO("Attribute %"PRIu8" added for resource: %"PRIu16"/%"PRIu16"/%"PRIu16" with value: %"PRIu16"\n", type, object->object_id, object->instance_id, resource, value);
 		return true;
 	}
 	LOG_DBG("Could not allocate new attribute\n");
@@ -106,6 +106,17 @@ lwm2m_notification_attributes_get(uint16_t *value, lwm2m_object_instance_t *obje
   	attr = attr->next;
   }
   return false;
+}
+/*---------------------------------------------------------------------------*/
+void 
+lwm2m_notification_attributes_print(lwm2m_object_instance_t *object)
+{
+  printf("----Notification attr-------\n");
+  lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->resource_attrs);
+  while(attr != NULL) {
+    printf("RSC_ID:%"PRIu16", type: %"PRIu8", value:%"PRIu16"\n", attr->resource_id, attr->type, attr->value);
+    attr = attr->next;
+  }
 }
 /*---------------------------------------------------------------------------*/
 /** @} */

@@ -1228,35 +1228,57 @@ perform_write_attr (lwm2m_object_instance_t *instance, lwm2m_context_t *ctx)
     resource = 0xFFFF;
   }
 
-  size = coap_get_query_variable(ctx->request, "pmin", &value_read);
-  if(size) {
-    value = parse_attr_value(value_read, size);
-    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMIN, value);
+  if(coap_has_query_variable(ctx->request, "pmin")) {
+    size = coap_get_query_variable(ctx->request, "pmin", &value_read);
+    if(size) {
+      value = parse_attr_value(value_read, size);
+      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMIN, value);
+    } else {
+      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_PMIN);
+    }
   }
 
-  size = coap_get_query_variable(ctx->request, "pmax", &value_read);
-  if(size) {
-    value = parse_attr_value(value_read, size);
-    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMAX, value);
+  if(coap_has_query_variable(ctx->request, "pmax")) {
+    size = coap_get_query_variable(ctx->request, "pmax", &value_read);
+    if(size) {
+      value = parse_attr_value(value_read, size);
+      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMAX, value);
+    } else {
+      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_PMAX);
+    }
   }
 
-  size = coap_get_query_variable(ctx->request, "gt", &value_read);
-  if(size) {
-    value = parse_attr_value(value_read, size);
-    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_GT, value);
+  if(coap_has_query_variable(ctx->request, "gt")) {
+    size = coap_get_query_variable(ctx->request, "gt", &value_read);
+    if(size) {
+      value = parse_attr_value(value_read, size);
+      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_GT, value);
+    } else {
+      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_GT);
+    }
   }
 
-  size = coap_get_query_variable(ctx->request, "lt", &value_read);
-  if(size) {
-    value = parse_attr_value(value_read, size);
-    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_LT , value);
+  if(coap_has_query_variable(ctx->request, "lt")) {
+    size = coap_get_query_variable(ctx->request, "lt", &value_read);
+    if(size) {
+      value = parse_attr_value(value_read, size);
+      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_LT, value);
+    } else {
+      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_LT);
+    }
   }
 
-  size = coap_get_query_variable(ctx->request, "st", &value_read);
-  if(size) {
-    value = parse_attr_value(value_read, size);
-    lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_ST , value);
+  if(coap_has_query_variable(ctx->request, "st")) {
+    size = coap_get_query_variable(ctx->request, "st", &value_read);
+    if(size) {
+      value = parse_attr_value(value_read, size);
+      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_ST, value);
+    } else {
+      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_ST);
+    }
   }
+
+  lwm2m_notification_attributes_print(instance);
   return LWM2M_STATUS_OK;
 }
 /*---------------------------------------------------------------------------*/
@@ -1569,7 +1591,6 @@ lwm2m_queue_mode_request_received();
   case METHOD_PUT:
     if(coap_get_header_uri_query(request, &query)) {
       context.operation = LWM2M_OP_WRITE_ATTR;
-      printf("PUT operation with query: is write attributes\n");
     } else {
       context.operation = LWM2M_OP_WRITE;
     }

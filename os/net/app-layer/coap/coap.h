@@ -201,6 +201,8 @@ coap_status_t coap_parse_message(coap_message_t *request, uint8_t *data,
 
 int coap_get_query_variable(coap_message_t *message, const char *name,
                             const char **output);
+int coap_has_query_variable(coap_message_t *coap_pkt, const char *name);
+
 int coap_get_post_variable(coap_message_t *message, const char *name,
                            const char **output);
 
