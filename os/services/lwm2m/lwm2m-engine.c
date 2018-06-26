@@ -1222,64 +1222,39 @@ perform_write_attr (lwm2m_object_instance_t *instance, lwm2m_context_t *ctx)
   const char *value_read;
   uint16_t value;
   int size;
+  lwm2m_status_t status = LWM2M_STATUS_NOT_FOUND;
   if (ctx->level == 3) {
     resource = ctx->resource_id;
   } else {
     resource = 0xFFFF;
   }
 
-  if(coap_has_query_variable(ctx->request, "pmin")) {
-    size = coap_get_query_variable(ctx->request, "pmin", &value_read);
-    if(size) {
-      value = parse_attr_value(value_read, size);
-      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMIN, value);
-    } else {
-      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_PMIN);
-    }
-  }
+  const lwm2m_attribute_type_t attr_types[5] = {LWM2M_ATTR_PMIN, LWM2M_ATTR_PMAX, LWM2M_ATTR_GT, LWM2M_ATTR_LT, LWM2M_ATTR_ST};
+  const char *attr_names[5] = {"pmin", "pmax", "gt", "lt", "st"};
+  int i;
 
-  if(coap_has_query_variable(ctx->request, "pmax")) {
-    size = coap_get_query_variable(ctx->request, "pmax", &value_read);
-    if(size) {
-      value = parse_attr_value(value_read, size);
-      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_PMAX, value);
-    } else {
-      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_PMAX);
-    }
-  }
-
-  if(coap_has_query_variable(ctx->request, "gt")) {
-    size = coap_get_query_variable(ctx->request, "gt", &value_read);
-    if(size) {
-      value = parse_attr_value(value_read, size);
-      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_GT, value);
-    } else {
-      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_GT);
-    }
-  }
-
-  if(coap_has_query_variable(ctx->request, "lt")) {
-    size = coap_get_query_variable(ctx->request, "lt", &value_read);
-    if(size) {
-      value = parse_attr_value(value_read, size);
-      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_LT, value);
-    } else {
-      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_LT);
-    }
-  }
-
-  if(coap_has_query_variable(ctx->request, "st")) {
-    size = coap_get_query_variable(ctx->request, "st", &value_read);
-    if(size) {
-      value = parse_attr_value(value_read, size);
-      lwm2m_notification_attributes_add(instance, resource, LWM2M_ATTR_ST, value);
-    } else {
-      lwm2m_notification_attributes_remove(instance, resource, LWM2M_ATTR_ST);
+  for(i=0; i<5; i++) {
+    if(coap_has_query_variable(ctx->request, attr_names[i])) {
+      size = coap_get_query_variable(ctx->request, attr_names[i], &value_read);
+      if(size) {
+        value = parse_attr_value(value_read, size);
+        if(lwm2m_notification_attributes_add(instance, resource, attr_types[i], value)) {
+          status = LWM2M_STATUS_OK;
+        } else {
+          status = LWM2M_STATUS_OPERATION_NOT_ALLOWED;
+        }
+      } else {
+        if(lwm2m_notification_attributes_remove(instance, resource, attr_types[i])) {
+          status = LWM2M_STATUS_OK;
+        } else {
+          status = LWM2M_STATUS_OPERATION_NOT_ALLOWED;
+        }
+      }
     }
   }
 
   lwm2m_notification_attributes_print(instance);
-  return LWM2M_STATUS_OK;
+  return status;
 }
 /*---------------------------------------------------------------------------*/
 lwm2m_object_instance_t *
@@ -1302,7 +1277,10 @@ lwm2m_engine_add_object(lwm2m_object_instance_t *object)
   uint16_t max_id = 0;
   int found = 0;
 
-  LIST_STRUCT_INIT(object, resource_attrs);
+  LIST_STRUCT_INIT(object, notification_attrs);
+  if(object->notification_attrs_memb != NULL) {
+    memb_init(object->notification_attrs_memb);
+  }
 
   if(object == NULL || object->callback == NULL) {
     /* Insufficient object configuration */

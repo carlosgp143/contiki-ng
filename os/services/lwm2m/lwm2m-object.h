@@ -94,6 +94,7 @@ struct lwm2m_notification_attribute {
   uint16_t resource_id;
   lwm2m_attribute_type_t type;
   uint16_t value;
+  uint64_t extra_data;
 };
 
 #define LWM2M_OBJECT_SECURITY_ID                0

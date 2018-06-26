@@ -52,17 +52,22 @@
 #define LWM2M_MAX_NOTIFICATION_ATTRIBUTES 100
 
 /*---------------------------------------------------------------------------*/
-MEMB(attribute_memb, lwm2m_notification_attribute_t, LWM2M_MAX_NOTIFICATION_ATTRIBUTES);
+//MEMB(attribute_memb, lwm2m_notification_attribute_t, LWM2M_MAX_NOTIFICATION_ATTRIBUTES);
 /*---------------------------------------------------------------------------*/
 bool
 lwm2m_notification_attributes_remove(lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type)
 {
-	lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->resource_attrs);
+  if(object->notification_attrs_memb == NULL) {
+    LOG_DBG("Memb block not provided, not posible to add attributes to this instance\n");
+    return false;
+  }
+	lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->notification_attrs);
   while(attr != NULL) {
 
   	if((attr->resource_id) == resource && (attr->type == type)){
-  		list_remove(object->resource_attrs, attr);
-  		memb_free(&attribute_memb, attr);
+      LOG_INFO("Attribute %"PRIu8" removed for resource: %"PRIu16"/%"PRIu16"/%"PRIu16"\n", type, object->object_id, object->instance_id, resource);
+  		list_remove(object->notification_attrs, attr);
+  		memb_free(object->notification_attrs_memb, attr);
   		return true;
   	}
   	attr = attr->next;
@@ -75,16 +80,20 @@ lwm2m_notification_attributes_add(lwm2m_object_instance_t *object, uint16_t reso
 								  lwm2m_attribute_type_t type, uint16_t value)
 {
 
+  if(object->notification_attrs_memb == NULL) {
+    LOG_DBG("Memb block not provided, not posible to add attributes to this instance\n");
+    return false;
+  }
 	/* First remove if the resource already has an attribute */
 	lwm2m_notification_attributes_remove(object, resource, type);
 
-	lwm2m_notification_attribute_t *attr = memb_alloc(&attribute_memb);
+	lwm2m_notification_attribute_t *attr = memb_alloc(object->notification_attrs_memb);
 	if(attr) {
 
 		attr->resource_id = resource;
 		attr->type = type;
 		attr->value = value;
-		list_add(object->resource_attrs, attr);
+		list_add(object->notification_attrs, attr);
 		LOG_INFO("Attribute %"PRIu8" added for resource: %"PRIu16"/%"PRIu16"/%"PRIu16" with value: %"PRIu16"\n", type, object->object_id, object->instance_id, resource, value);
 		return true;
 	}
@@ -95,7 +104,11 @@ lwm2m_notification_attributes_add(lwm2m_object_instance_t *object, uint16_t reso
 bool
 lwm2m_notification_attributes_get(uint16_t *value, lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type)
 {
-	lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->resource_attrs);
+  if(object->notification_attrs_memb == NULL) {
+    LOG_DBG("Memb block not provided, not posible to add attributes to this instance\n");
+    return false;
+  }
+	lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->notification_attrs);
   while(attr != NULL) {
 
   	if((attr->resource_id) == resource && (attr->type == type)){
@@ -108,11 +121,33 @@ lwm2m_notification_attributes_get(uint16_t *value, lwm2m_object_instance_t *obje
   return false;
 }
 /*---------------------------------------------------------------------------*/
+uint64_t
+lwm2m_notification_attributes_get_extra_data(lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type)
+{
+  if(object->notification_attrs_memb == NULL) {
+    LOG_DBG("Memb block not provided, not posible to add attributes to this instance\n");
+    return false;
+  }
+  lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->notification_attrs);
+  while(attr != NULL) {
+
+    if((attr->resource_id) == resource && (attr->type == type)){
+      LOG_INFO("Returning extra data: %"PRIu64" for attribute %"PRIu8" from resource: %"PRIu16"/%"PRIu16"/%"PRIu16"\n", attr->extra_data, type, object->object_id, object->instance_id, resource);
+      return attr->extra_data;
+    }
+    attr = attr->next;
+  }
+  return -1;
+}
+/*---------------------------------------------------------------------------*/
 void 
 lwm2m_notification_attributes_print(lwm2m_object_instance_t *object)
 {
+  if(object->notification_attrs_memb == NULL) {
+    return;
+  }
   printf("----Notification attr-------\n");
-  lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->resource_attrs);
+  lwm2m_notification_attribute_t *attr = (lwm2m_notification_attribute_t *)list_head(object->notification_attrs);
   while(attr != NULL) {
     printf("RSC_ID:%"PRIu16", type: %"PRIu8", value:%"PRIu16"\n", attr->resource_id, attr->type, attr->value);
     attr = attr->next;

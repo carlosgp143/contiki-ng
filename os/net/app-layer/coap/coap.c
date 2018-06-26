@@ -284,8 +284,8 @@ coap_has_variable(const char *buffer, size_t length, const char *name)
   name_len = strlen(name);
   end = buffer + length;
 
-  for(start = buffer; start + name_len < end; ++start) {
-    if((start == buffer || start[-1] == '&') && start[name_len] == '='
+  for(start = buffer; start + name_len <= end; ++start) {
+    if((start == buffer || start[-1] == '&')
        && strncmp(name, start, name_len) == 0) {
 
       return 1;

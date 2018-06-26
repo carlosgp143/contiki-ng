@@ -45,6 +45,7 @@
 #ifndef LWM2M_ENGINE_H
 #define LWM2M_ENGINE_H
 
+#include "lib/memb.h"
 #include "lib/list.h"
 #include "lwm2m-object.h"
 #include "lwm2m-queue-mode-conf.h"
@@ -83,8 +84,9 @@ struct lwm2m_object_instance {
   const lwm2m_resource_id_t *resource_ids;
   uint16_t resource_count;
 
-  /* A list of resource notification attributes */
-  LIST_STRUCT(resource_attrs);
+  /* A list of resource notification attributes and a pointer to the memory block to allocate */
+  LIST_STRUCT(notification_attrs);
+  struct memb *notification_attrs_memb;
 
   /* the callback for requests */
   lwm2m_object_instance_callback_t callback;
