@@ -42,6 +42,7 @@
  */
 
 #include "coap-engine.h"
+#include "coap-duplicate-detection.h"
 #include "sys/cc.h"
 #include "lib/list.h"
 #include <stdio.h>
@@ -165,7 +166,30 @@ coap_receive(const coap_endpoint_t *src,
 
   if(coap_status_code == NO_ERROR) {
 
-    /*TODO duplicates suppression, if required by application */
+    /* Check if it is a duplicate */
+
+    if(coap_duplicate_detection_is_duplicated(src, message->mid)) {
+      coap_transaction_t *t = coap_get_transaction_by_mid(message->mid);
+      if(t != NULL) {
+        /* The response is in the buffer, send it */
+        LOG_DBG("Transaction in the buffer, triger a retransmission\n");
+
+        coap_trigger_transaction_retransmission(t);
+      } else if((t = coap_new_transaction(message->mid, src))) {
+         LOG_DBG("No transaction in the buffer, send a normal ACK\n");
+         coap_init_message(response, COAP_TYPE_ACK, CONTENT_2_05, message->mid);
+         
+          if(message->token_len) {
+            coap_set_token(response, message->token, message->token_len);
+          }
+          t->message_len = coap_serialize_message(response, t->message);
+          coap_send_transaction(t);
+      }
+      /* Return here, so no handlers are called */
+      return coap_status_code;
+    } else {
+      coap_duplicate_detection_add(src, message->mid);
+    }
 
     LOG_DBG("  Parsed: v %u, t %u, tkl %u, c %u, mid %u\n", message->version,
             message->type, message->token_len, message->code, message->mid);
@@ -346,7 +370,7 @@ coap_receive(const coap_endpoint_t *src,
     /* if(parsed correctly) */
   if(coap_status_code == NO_ERROR) {
     if(transaction) {
-      coap_send_transaction(transaction);
+      //coap_send_transaction(transaction);
     }
   } else if(coap_status_code == MANUAL_RESPONSE) {
     LOG_DBG("Clearing transaction for manual response");
@@ -395,6 +419,7 @@ coap_engine_init(void)
 
   coap_transport_init();
   coap_init_connection();
+  coap_duplicate_detection_init();
 }
 /*---------------------------------------------------------------------------*/
 void
@@ -407,6 +432,7 @@ coap_engine_stop(void)
 /*---------------------------------------------------------------------------*/
 int coap_engine_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t len)
 {
+  printf("CoAP engine send to len:%d\n", len);
   if(!((coap_flags & MANUALLY_STOPPED_MASK)>>1)) {
     return coap_sendto(ep, data, len);
   }

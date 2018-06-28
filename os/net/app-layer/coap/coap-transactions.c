@@ -75,6 +75,18 @@ coap_retransmit_transaction(coap_timer_t *nt)
 /*---------------------------------------------------------------------------*/
 /*- Internal API ------------------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
+void
+coap_trigger_transaction_retransmission(coap_transaction_t *t)
+{
+  if(t == NULL) {
+    LOG_DBG("Transaction to trigger retransmission is NULL!\n");
+    return;
+  }
+  ++(t->retrans_counter);
+  LOG_DBG("Retransmitting %u (%u)\n", t->mid, t->retrans_counter);
+  coap_send_transaction(t);
+}
+/*---------------------------------------------------------------------------*/
 coap_transaction_t *
 coap_new_transaction(uint16_t mid, const coap_endpoint_t *endpoint)
 {
@@ -98,7 +110,7 @@ coap_new_transaction(uint16_t mid, const coap_endpoint_t *endpoint)
 void
 coap_send_transaction(coap_transaction_t *t)
 {
-  LOG_DBG("Sending transaction %u\n", t->mid);
+  printf("Sending transaction %u with len: %d\n", t->mid, t->message_len);
 
   coap_engine_sendto(&t->endpoint, t->message, t->message_len);
 

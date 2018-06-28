@@ -79,6 +79,7 @@ void coap_send_transaction(coap_transaction_t *t);
 void coap_clear_transaction(coap_transaction_t *t);
 void coap_clear_all_transactions(void);
 coap_transaction_t *coap_get_transaction_by_mid(uint16_t mid);
+void coap_trigger_transaction_retransmission(coap_transaction_t *t);
 
 #endif /* COAP_TRANSACTIONS_H_ */
 /** @} */

@@ -65,7 +65,7 @@
 /* Log configuration */
 #include "coap-logx.h"
 #define LOG_MODULE "coap-uip"
-#define LOG_LEVEL  LOG_LEVEL_COAP
+#define LOG_LEVEL  LOG_LEVEL_DBG
 
 #ifdef WITH_DTLS
 #include "tinydtls.h"
@@ -388,7 +388,7 @@ coap_sendto(const coap_endpoint_t *ep, const uint8_t *data, uint16_t length)
   if(!coap_endpoint_is_connected(ep)) {
     LOG_WARN("endpoint ");
     LOG_WARN_COAP_EP(ep);
-    LOG_WARN_(" not connected - dropping packet\n");
+    printf(" not connected - dropping packet\n");
     LOGX_ERR(LOGX_COAP_SEND_FAIL, "Packet dropped. Endpoint not connected\n");
     return -1;
   }
