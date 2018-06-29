@@ -47,6 +47,20 @@
 #include "lwm2m-engine.h"
 #include <stdbool.h>
 
+typedef struct lwm2m_notification_periodic_attr lwm2m_notification_periodic_attr_t;
+
+struct lwm2m_notification_periodic_attr {
+  lwm2m_notification_periodic_attr_t *next;
+  lwm2m_object_instance_t *obj;
+  uint16_t rsc_id;
+  lwm2m_attribute_type_t type;
+  uint16_t value;
+  uint64_t next_expiration_time;
+};
+
+bool lwm2m_notification_attributes_add_pmax(lwm2m_object_instance_t *object, uint16_t resource, uint16_t value);
+void lwm2m_notification_attributes_update_pmax(lwm2m_object_instance_t *object, uint16_t resource);
+
 
 bool lwm2m_notification_attributes_add(lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type, uint16_t value);
 
@@ -55,6 +69,9 @@ bool lwm2m_notification_attributes_get(uint16_t *value, lwm2m_object_instance_t 
 bool lwm2m_notification_attributes_remove(lwm2m_object_instance_t *object, uint16_t resource, lwm2m_attribute_type_t type);
 
 void lwm2m_notification_attributes_print(lwm2m_object_instance_t *object);
+void  lwm2m_notification_pmax_print();
+
+void lwm2m_notification_attributes_init(void);
 
 #endif /* LWM2M_NOTIFICATION_ATTRIBUTES_H_ */
 /** @} */

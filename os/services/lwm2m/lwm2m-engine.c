@@ -557,6 +557,8 @@ lwm2m_engine_init(void)
 
 #endif /* LWM2M_ENGINE_CLIENT_ENDPOINT_NAME */
 
+  lwm2m_notification_attributes_init();
+
   /* Initialize CoAP engine. Contiki-NG already does that from the main,
    * but for standalone use of lwm2m, this is required here. coap_engine_init()
    * checks for double-initialization and can be called twice safely. */
@@ -1229,7 +1231,19 @@ perform_write_attr (lwm2m_object_instance_t *instance, lwm2m_context_t *ctx)
     resource = 0xFFFF;
   }
 
-  const lwm2m_attribute_type_t attr_types[5] = {LWM2M_ATTR_PMIN, LWM2M_ATTR_PMAX, LWM2M_ATTR_GT, LWM2M_ATTR_LT, LWM2M_ATTR_ST};
+  if(coap_has_query_variable(ctx->request, "pmax")) {
+      size = coap_get_query_variable(ctx->request, "pmax", &value_read);
+      if(size) {
+        value = parse_attr_value(value_read, size);
+        if(lwm2m_notification_attributes_add_pmax(instance, resource, value)) {
+          status = LWM2M_STATUS_OK;
+        } else {
+          status = LWM2M_STATUS_OPERATION_NOT_ALLOWED;
+        }
+      }
+    }
+
+  /*const lwm2m_attribute_type_t attr_types[5] = {LWM2M_ATTR_PMIN, LWM2M_ATTR_PMAX, LWM2M_ATTR_GT, LWM2M_ATTR_LT, LWM2M_ATTR_ST};
   const char *attr_names[5] = {"pmin", "pmax", "gt", "lt", "st"};
   int i;
 
@@ -1253,7 +1267,7 @@ perform_write_attr (lwm2m_object_instance_t *instance, lwm2m_context_t *ctx)
     }
   }
 
-  lwm2m_notification_attributes_print(instance);
+  lwm2m_notification_attributes_print(instance);*/
   return status;
 }
 /*---------------------------------------------------------------------------*/
@@ -1729,6 +1743,7 @@ lwm2m_send_notification(char* path)
     } 
 #endif
   coap_notify_observers_sub(NULL, path);
+
 }
 /*---------------------------------------------------------------------------*/
 void 
@@ -1753,7 +1768,7 @@ lwm2m_notify_object_observers(lwm2m_object_instance_t *obj,
     }
   }
 
-  LOG_INFO("Sending notification for path: %s with level: %d\n", path, level);
+  printf("Sending notification for path: %s with level: %d\n", path, level);
 
 #if LWM2M_QUEUE_MODE_ENABLED
   if(coap_has_observers(path)) {
@@ -1774,6 +1789,7 @@ lwm2m_notify_object_observers(lwm2m_object_instance_t *obj,
 #else 
   // Check if there is an observer for an instance and if that is the case, notify with that path */
   lwm2m_send_notification(path);
+  lwm2m_notification_attributes_update_pmax(obj, resource);
 #endif
 }
 /*---------------------------------------------------------------------------*/
