@@ -83,8 +83,9 @@ static uint8_t coap_flags = 0x00; /* Bit 0: is initialized -> avoid double initi
 /*- CoAP service handlers---------------------------------------------------*/
 /*---------------------------------------------------------------------------*/
 void
-coap_add_handler(coap_handler_t *handler)
+coap_add_handler(coap_handler_t *handler, uint8_t accept_duplicates)
 {
+  handler->coap_accept_duplicates = accept_duplicates;
   list_add(coap_handlers, handler);
 }
 /*---------------------------------------------------------------------------*/
@@ -96,13 +97,16 @@ coap_remove_handler(coap_handler_t *handler)
 /*---------------------------------------------------------------------------*/
 coap_handler_status_t
 coap_call_handlers(coap_message_t *request, coap_message_t *response,
-                      uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
+                      uint8_t *buffer, uint16_t buffer_size, int32_t *offset, int duplicated)
 {
   coap_handler_status_t status;
   coap_handler_t *r;
   for(r = list_head(coap_handlers); r != NULL; r = r->next) {
     if(r->handler) {
-      status = r->handler(request, response, buffer, buffer_size, offset);
+      if(duplicated && !r->coap_accept_duplicates) {
+        continue;
+      }
+      status = r->handler(request, response, buffer, buffer_size, offset, duplicated);
       if(status != COAP_HANDLER_STATUS_CONTINUE) {
         /* Request handled. */
 
@@ -120,16 +124,20 @@ coap_call_handlers(coap_message_t *request, coap_message_t *response,
 /*---------------------------------------------------------------------------*/
 static CC_INLINE coap_handler_status_t
 call_service(coap_message_t *request, coap_message_t *response,
-             uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
+             uint8_t *buffer, uint16_t buffer_size, int32_t *offset, int duplicated)
 {
   coap_handler_status_t status;
-  status = coap_call_handlers(request, response, buffer, buffer_size, offset);
+  status = coap_call_handlers(request, response, buffer, buffer_size, offset, duplicated);
   if(status != COAP_HANDLER_STATUS_CONTINUE) {
     return status;
   }
-  status = invoke_coap_resource_service(request, response, buffer, buffer_size, offset);
-  if(status != COAP_HANDLER_STATUS_CONTINUE) {
-    return status;
+
+  /* Only handlers can accept duplicates, not resources */
+  if(!duplicated) {
+    status = invoke_coap_resource_service(request, response, buffer, buffer_size, offset);
+    if(status != COAP_HANDLER_STATUS_CONTINUE) {
+      return status;
+    }
   }
 
   coap_set_status_code(response, NOT_FOUND_4_04);
@@ -156,6 +164,7 @@ coap_receive(const coap_endpoint_t *src,
   static coap_message_t response[1];
   coap_transaction_t *transaction = NULL;
   coap_handler_status_t status;
+  uint8_t duplicated;
 
   if(((coap_flags & MANUALLY_STOPPED_MASK)>>1)) {
     return MANUALLY_STOPPED;
@@ -169,6 +178,7 @@ coap_receive(const coap_endpoint_t *src,
     /* Check if it is a duplicate */
 
     if(coap_duplicate_detection_is_duplicated(src, message->mid)) {
+      duplicated = 1;
       coap_transaction_t *t = coap_get_transaction_by_mid(message->mid);
       if(t != NULL) {
         /* The response is in the buffer, send it */
@@ -188,6 +198,7 @@ coap_receive(const coap_endpoint_t *src,
       /* Return here, so no handlers are called */
       return coap_status_code;
     } else {
+      duplicated = 0;
       coap_duplicate_detection_add(src, message->mid);
     }
 
@@ -242,7 +253,7 @@ coap_receive(const coap_endpoint_t *src,
           /* call CoAP framework and check if found and allowed */
           status = call_service(message, response,
                                 transaction->message + COAP_MAX_HEADER_SIZE,
-                                block_size, &new_offset);
+                                block_size, &new_offset, duplicated);
         }
 
         if(status != COAP_HANDLER_STATUS_CONTINUE) {

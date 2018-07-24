@@ -266,7 +266,7 @@ coap_notify_observers_sub(coap_resource_t *resource, const char *subpath)
         /* Either old style get_handler or the full handler */
         if(coap_call_handlers(request, notification, transaction->message +
                               COAP_MAX_HEADER_SIZE, COAP_MAX_CHUNK_SIZE,
-                              &new_offset) > 0) {
+                              &new_offset, 0) > 0) {
           LOG_DBG("Notification on new handlers\n");
         } else {
           if(resource != NULL) {

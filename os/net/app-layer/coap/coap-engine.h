@@ -53,26 +53,27 @@ typedef struct coap_periodic_resource_s coap_periodic_resource_t;
 
 typedef enum {
   COAP_HANDLER_STATUS_CONTINUE,
-  COAP_HANDLER_STATUS_PROCESSED
+  COAP_HANDLER_STATUS_PROCESSED,
 } coap_handler_status_t;
 
 typedef coap_handler_status_t
 (* coap_handler_callback_t)(coap_message_t *request,
                             coap_message_t *response,
                             uint8_t *buffer, uint16_t buffer_size,
-                            int32_t *offset);
+                            int32_t *offset, int duplicated);
 
 typedef struct coap_handler coap_handler_t;
 
 struct coap_handler {
   coap_handler_t *next;
   coap_handler_callback_t handler;
+  uint8_t coap_accept_duplicates;
 };
 
 #define COAP_HANDLER(name, handler) \
   coap_handler_t name = { NULL, handler }
 
-void coap_add_handler(coap_handler_t *handler);
+void coap_add_handler(coap_handler_t *handler, uint8_t accept_duplicates);
 void coap_remove_handler(coap_handler_t *handler);
 
 void coap_engine_init(void);
@@ -88,7 +89,8 @@ coap_handler_status_t coap_call_handlers(coap_message_t *request,
                                          coap_message_t *response,
                                          uint8_t *buffer,
                                          uint16_t buffer_size,
-                                         int32_t *offset);
+                                         int32_t *offset,
+                                         int duplicated);
 /*---------------------------------------------------------------------------*/
 /* signatures of handler functions */
 typedef void (* coap_resource_handler_t)(coap_message_t *request,

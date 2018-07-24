@@ -131,7 +131,8 @@ static coap_handler_status_t lwm2m_handler_callback(coap_message_t *request,
                                                     coap_message_t *response,
                                                     uint8_t *buffer,
                                                     uint16_t buffer_size,
-                                                    int32_t *offset);
+                                                    int32_t *offset, 
+                                                    int duplicated);
 static lwm2m_object_instance_t *
 next_object_instance(const lwm2m_context_t *context, lwm2m_object_t *object, lwm2m_object_instance_t *last);
 
@@ -564,7 +565,7 @@ lwm2m_engine_init(bool restart)
   coap_engine_init();
 
   /* Register the CoAP handler for lightweight object handling */
-  coap_add_handler(&lwm2m_handler);
+  coap_add_handler(&lwm2m_handler, 0);
 
 #if USE_RD_CLIENT
   lwm2m_rd_client_init(endpoint);
@@ -1358,7 +1359,8 @@ next_object_instance(const lwm2m_context_t *context, lwm2m_object_t *object,
 /*---------------------------------------------------------------------------*/
 static coap_handler_status_t
 lwm2m_handler_callback(coap_message_t *request, coap_message_t *response,
-                       uint8_t *buffer, uint16_t buffer_size, int32_t *offset)
+                       uint8_t *buffer, uint16_t buffer_size, int32_t *offset,
+                       int duplicated)
 {
   const char *url;
   int url_len;
